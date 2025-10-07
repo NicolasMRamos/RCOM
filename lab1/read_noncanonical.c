@@ -1,4 +1,4 @@
-// Example of how to write to the serial port in non-canonical mode
+// Example of how to read from the serial port in non-canonical mode
 //
 // Modified by: Eduardo Nuno Almeida [enalmeida@fe.up.pt]
 
@@ -15,6 +15,11 @@
 
 #define FALSE 0
 #define TRUE 1
+#define FLAG 0x7E
+#define UA 0x07
+#define SET 0x03
+#define ADDR 0x03
+unsigned char UA_byte[5] = {FLAG, ADDR, UA, ADDR^UA, FLAG};
 
 #define BAUDRATE 38400
 #define BUF_SIZE 256
@@ -57,21 +62,73 @@ int main(int argc, char *argv[])
 
     printf("Serial port %s opened\n", serialPort);
 
-    // Create string to send
-    unsigned char buf[BUF_SIZE] = {0};
+    // Read from serial port until the 'z' char is received.
 
-    for (int i = 0; i < BUF_SIZE; i++)
+    // NOTE: This while() cycle is a simple example showing how to read from the serial port.
+    // It must be changed in order to respect the specifications of the protocol indicated in the Lab guide.
+
+    // TODO: Save the received bytes in a buffer array and print it at the end of the program.
+    int nBytesBuf = 0;
+    int state = 0;
+    unsigned char address;
+    unsigned char control;
+
+    while (STOP == FALSE)
     {
-        buf[i] = 'a' + i % 26;
+        // Read one byte from serial port.
+        // NOTE: You must check how many bytes were actually read by reading the return value.
+        // In this example, we assume that the byte is always read, which may not be true.
+        unsigned char byte;
+        int bytes = readByteSerialPort(&byte);
+        if(bytes == -1) return EXIT_FAILURE;
+        nBytesBuf += bytes;
+        printf("Byte read: 0x%02X\n", byte);
+
+        switch(state){
+            case 0:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    state = 0;
+                }
+            break;
+            case 1:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    address = byte;
+                    state = 2;
+                }
+            break;
+            case 2:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    control = byte;
+                    state = 3;
+                }
+            break;
+            case 3:
+                if(byte == FLAG){
+                    state = 1;
+                } else if (address^control == byte){
+                    state = 4;
+                } else {
+                    state = 0;
+                }
+            break;
+            default:
+                if(byte == FLAG){
+                    STOP = TRUE;
+                    int ret = writeBytesSerialPort(UA_byte, 5);
+                    if(ret == -1) return EXIT_FAILURE;
+                    printf("UA byte sent.\n");
+                } else {
+                    state = 0;
+                }
+            break;
+        }
     }
-
-    // In non-canonical mode, '\n' does not end the writing.
-    // Test this condition by placing a '\n' in the middle of the buffer.
-    // The whole buffer must be sent even with the '\n'.
-    buf[5] = '\n';
-
-    int bytes = writeBytesSerialPort(buf, BUF_SIZE);
-    printf("%d bytes written to serial port\n", bytes);
 
     // Wait until all bytes have been written to the serial port
     sleep(1);

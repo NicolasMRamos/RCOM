@@ -1,4 +1,4 @@
-// Example of how to read from the serial port in non-canonical mode
+// Example of how to write to the serial port in non-canonical mode
 //
 // Modified by: Eduardo Nuno Almeida [enalmeida@fe.up.pt]
 
@@ -15,6 +15,10 @@
 
 #define FALSE 0
 #define TRUE 1
+#define FLAG 0x7E
+#define UA 0x07
+#define SET 0x03
+#define ADDR 0x03
 
 #define BAUDRATE 38400
 #define BUF_SIZE 256
@@ -57,13 +61,19 @@ int main(int argc, char *argv[])
 
     printf("Serial port %s opened\n", serialPort);
 
-    // Read from serial port until the 'z' char is received.
+    unsigned char SET_byte[5] = {FLAG, ADDR, SET, ADDR^SET, FLAG};
 
-    // NOTE: This while() cycle is a simple example showing how to read from the serial port.
-    // It must be changed in order to respect the specifications of the protocol indicated in the Lab guide.
+    int ret = writeBytesSerialPort(SET_byte, 5);
+    if(ret == -1) return EXIT_FAILURE;
+    printf("%d bytes written to serial port\n", ret);
 
-    // TODO: Save the received bytes in a buffer array and print it at the end of the program.
+    // Wait until all bytes have been written to the serial port
+    sleep(1);
+
     int nBytesBuf = 0;
+    int state = 0;
+    unsigned char address;
+    unsigned char control;
 
     while (STOP == FALSE)
     {
@@ -72,18 +82,53 @@ int main(int argc, char *argv[])
         // In this example, we assume that the byte is always read, which may not be true.
         unsigned char byte;
         int bytes = readByteSerialPort(&byte);
+        if(bytes == -1) return EXIT_FAILURE;
         nBytesBuf += bytes;
+        printf("Byte read: 0x%02X\n", byte);
 
-        printf("Byte received: %c\n", byte);
-
-        if (byte == 'z')
-        {
-            printf("Received 'z' char. Stop reading from serial port.\n");
-            STOP = TRUE;
+        switch(state){
+            case 0:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    state = 0;
+                }
+            break;
+            case 1:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    address = byte;
+                    state = 2;
+                }
+            break;
+            case 2:
+                if(byte == FLAG){
+                    state = 1;
+                } else {
+                    control = byte;
+                    state = 3;
+                }
+            break;
+            case 3:
+                if(byte == FLAG){
+                    state = 1;
+                } else if (address^control == byte){
+                    state = 4;
+                } else {
+                    state = 0;
+                }
+            break;
+            default:
+                if(byte == FLAG){
+                    STOP = TRUE;
+                    printf("UA byte read.\n");
+                } else {
+                    state = 0;
+                }
+            break;
         }
     }
-
-    printf("Total bytes received: %d\n", nBytesBuf);
 
     // Close serial port
     if (closeSerialPort() < 0)
