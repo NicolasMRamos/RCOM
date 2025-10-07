@@ -19,6 +19,13 @@
 #define BAUDRATE 38400
 #define BUF_SIZE 256
 
+#define FLAG 0x7E
+#define A_WRITE 0x03
+#define C_SET 0x03
+#define BCC1 A_WRITE^C_SET
+#define STOP_TEST 0x99
+
+
 int fd = -1;           // File descriptor for open serial port
 struct termios oldtio; // Serial port settings to restore on closing
 volatile int STOP = FALSE;
@@ -58,23 +65,62 @@ int main(int argc, char *argv[])
     printf("Serial port %s opened\n", serialPort);
 
     // Create string to send
-    unsigned char buf[BUF_SIZE] = {0};
-
-    for (int i = 0; i < BUF_SIZE; i++)
-    {
-        buf[i] = 'a' + i % 26;
-    }
+    unsigned char buf[6] = {FLAG, A_WRITE, C_SET, BCC1, FLAG, STOP_TEST};
 
     // In non-canonical mode, '\n' does not end the writing.
     // Test this condition by placing a '\n' in the middle of the buffer.
     // The whole buffer must be sent even with the '\n'.
-    buf[5] = '\n';
+    //buf[5] = '\n';
 
     int bytes = writeBytesSerialPort(buf, BUF_SIZE);
     printf("%d bytes written to serial port\n", bytes);
 
     // Wait until all bytes have been written to the serial port
     sleep(1);
+
+    int state = 0;
+
+    while (state != 5) {
+        int byte = readByteSerialPort(&bytes);
+        printf("%d\n", byte);
+        switch (byte) {
+            case FLAG:
+                if (state == 4) {
+                    printf("FLAG - STATE 5\n");
+                    state = 5;
+                } else {        
+                    printf("FLAG - STATE 1\n");
+                    state = 1;
+                }
+                break;
+            case A_WRITE:
+                if (state == 1) {
+                    printf("A - STATE 2\n");
+                    state = 2;
+                } else if (state == 2) {
+                    printf("C - STATE 3\n");
+                    state = 3;
+                }
+                else {
+                    printf("A - STATE 0\n");
+                    state = 0;
+                }
+                break;
+            case BCC1:
+                if (state == 3) {
+                    printf("BCC1 - STATE 4\n");
+                    state = 4;
+                } else {
+                    printf("BCC1 - STATE 0\n");
+                    state = 0;
+                }
+                break;
+            default:
+                printf("OTHER_RCV - STATE 0\n");
+                state = 0;
+                break;
+        }
+    }
 
     // Close serial port
     if (closeSerialPort() < 0)
