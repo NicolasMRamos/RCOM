@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
@@ -31,6 +32,19 @@ int openSerialPort(const char *serialPort, int baudRate);
 int closeSerialPort();
 int readByteSerialPort(unsigned char *byte);
 int writeBytesSerialPort(const unsigned char *bytes, int nBytes);
+
+int alarmEnabled = FALSE;
+int alarmCount = 0;
+
+// Alarm function handler.
+// This function will run whenever the signal SIGALRM is received.
+void alarmHandler(int signal)
+{
+    alarmEnabled = FALSE;
+    alarmCount++;
+
+    printf("Alarm #%d received\n", alarmCount);
+}
 
 // ---------------------------------------------------
 // MAIN
@@ -61,6 +75,16 @@ int main(int argc, char *argv[])
 
     printf("Serial port %s opened\n", serialPort);
 
+    struct sigaction act = {0};
+    act.sa_handler = &alarmHandler;
+    if (sigaction(SIGALRM, &act, NULL) == -1)
+    {
+        perror("sigaction");
+        exit(1);
+    }
+
+    printf("Alarm configured\n");
+
     unsigned char SET_byte[5] = {FLAG, ADDR, SET, ADDR^SET, FLAG};
 
     int ret = writeBytesSerialPort(SET_byte, 5);
@@ -75,7 +99,11 @@ int main(int argc, char *argv[])
     unsigned char address;
     unsigned char control;
 
-    while (STOP == FALSE)
+    // Activate alarm
+    alarm(3);
+    alarmEnabled = TRUE;
+
+    while (STOP == FALSE && alarmCount < 4) // Second condition serves as a security cap so the SET byte isn't send infinite times if something goes wrong with the connection
     {
         // Read one byte from serial port.
         // NOTE: You must check how many bytes were actually read by reading the return value.
@@ -85,6 +113,19 @@ int main(int argc, char *argv[])
         if(bytes == -1) return EXIT_FAILURE;
         nBytesBuf += bytes;
         printf("Byte read: 0x%02X\n", byte);
+
+        if(alarmEnabled == FALSE){ // Did not receive full UA byte yet
+
+            // Resend SET byte
+            int ret = writeBytesSerialPort(SET_byte, 5);
+            if(ret == -1) return EXIT_FAILURE;
+            printf("Timeout, resending SET: %d bytes written to serial port\n", ret);
+
+            // Setup alarm again
+            alarm(3);
+            alarmEnabled = TRUE;
+            state = 0;
+        }
 
         switch(state){
             case 0:
@@ -123,12 +164,22 @@ int main(int argc, char *argv[])
                 if(byte == FLAG){
                     STOP = TRUE;
                     printf("UA byte read.\n");
+
+                    // UA byte read, disable alarm completely
+                    alarmEnabled = FALSE;
+                    alarm(0);
                 } else {
                     state = 0;
                 }
             break;
         }
     }
+
+    // Debugging: did it exit the loop because it succeded or because of exceeding max number of attempts?
+    if (STOP)
+        printf("Byte read succesfully after %d attempt(s).\n", alarmCount + 1);
+    else
+        printf("Connection failed: no UA after %d retries.\n", alarmCount);
 
     // Close serial port
     if (closeSerialPort() < 0)
