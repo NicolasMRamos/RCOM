@@ -4,6 +4,10 @@
 #include "serial_port.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <signal.h>
+
+#include <unistd.h>
 
 #define FLAG 0x7E
 #define ADDR_ST_RR 0x03
@@ -130,7 +134,7 @@ int llopen(LinkLayer connectionParameters)
                 case c_rcv:
                     if(byte == FLAG){
                         state = flag_rcv;
-                    } else if (address^control == byte){
+                    } else if ((address^control) == byte){
                         state = bcc_ok;
                     } else {
                         state = start;
@@ -191,7 +195,7 @@ int llopen(LinkLayer connectionParameters)
                 case c_rcv:
                     if(byte == FLAG){
                         state = flag_rcv;
-                    } else if (address^control == byte){
+                    } else if ((address^control) == byte){
                         state = bcc_ok;
                     } else {
                         state = start;
@@ -200,7 +204,7 @@ int llopen(LinkLayer connectionParameters)
                 default:
                     if(byte == FLAG){
                         STOP = TRUE;
-                        
+
                         // SET byte read, send UA byte
                         int ret = writeBytesSerialPort(ua_byte, 5);
                         if(ret == -1) return EXIT_FAILURE;
