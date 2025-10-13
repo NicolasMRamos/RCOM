@@ -3,9 +3,21 @@
 #include "application_layer.h"
 
 #include <stdio.h>
+#include <string.h>
+#include "link_layer.h"
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
-    // TODO: Implement this function
+    LinkLayer configs;
+    strcpy(configs.serialPort, serialPort);
+    configs.baudRate = baudRate;
+    configs.nRetransmissions = nTries;
+    configs.timeout = timeout;
+
+    if(strcmp(role,"tx") == 0) configs.role = LlTx;
+    else configs.role = LlRx;
+
+    llopen(configs);
+    printf("Connection established, returning now.\n");
 }
