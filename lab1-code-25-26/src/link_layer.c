@@ -34,7 +34,7 @@ typedef enum {
 
 // SET and UA Bytes
 unsigned char set_byte[5] = {FLAG, ADDR_ST_RR, SET_CTRL, ADDR_ST_RR^SET_CTRL, FLAG};
-unsigned char ua_byte[5] = {FLAG, ADDR_ST_RR, UA_CTRL, ADDR_ST_RR^SET_CTRL, FLAG};
+unsigned char ua_byte[5] = {FLAG, ADDR_ST_RR, UA_CTRL, ADDR_ST_RR^UA_CTRL, FLAG};
 
 // Alarm Handler
 void alarmHandler(int signal)
