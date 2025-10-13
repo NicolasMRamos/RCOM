@@ -47,5 +47,4 @@ run_cable: cable
 .PHONY: clean
 clean:
 	rm -f $(BIN)/main
-	rm -f $(BIN)/cable
 	rm -f $(RX_FILE)

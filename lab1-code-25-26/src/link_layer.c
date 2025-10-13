@@ -42,7 +42,6 @@ void alarmHandler(int signal)
     alarmEnabled = FALSE;
     alarmCount++;
 
-    printf("Alarm #%d received\n", alarmCount);
 }
 
 // MISC
@@ -57,7 +56,7 @@ int llopen(LinkLayer connectionParameters)
     if(ret == -1) return EXIT_FAILURE;
     printf("Serial port opened.\n");
 
-    int state;
+    int state = start;
     unsigned char address, control;
 
     /////////////////
@@ -140,18 +139,20 @@ int llopen(LinkLayer connectionParameters)
                         state = start;
                     }
                 break;
-                default:
+                case bcc_ok:
                     if(byte == FLAG){
-                        STOP = TRUE;
-                        printf("UA byte read.\n");
+                        printf("UA byte read. Disabling alarm.\n");
 
                         // Disable alarm after UA byte is read
                         alarmEnabled = FALSE;
                         alarm(0);
+
+                        STOP = TRUE;
                     } else {
                         state = start;
                     }
                 break;
+                default: break;
             }
         }
 
@@ -166,6 +167,7 @@ int llopen(LinkLayer connectionParameters)
             int bytes = readByteSerialPort(&byte);
             if(bytes == -1) return EXIT_FAILURE;
             printf("Byte read: 0x%02X\n", byte);
+            
 
             // State machine for reading SET byte
             switch(state){
@@ -201,18 +203,21 @@ int llopen(LinkLayer connectionParameters)
                         state = start;
                     }
                 break;
-                default:
+                case bcc_ok:
                     if(byte == FLAG){
-                        STOP = TRUE;
-
+                        printf("SET byte read, sending UA byte..\n");
+                        
                         // SET byte read, send UA byte
                         int ret = writeBytesSerialPort(ua_byte, 5);
                         if(ret == -1) return EXIT_FAILURE;
                         printf("UA byte sent.\n");
+
+                        STOP = TRUE;
                     } else {
                         state = start;
                     }
                 break;
+                default: break;
             }
         }
     }
