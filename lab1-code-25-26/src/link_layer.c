@@ -6,18 +6,24 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
-
 #include <unistd.h>
 
+// Byte Camps
+#define ESC 0x7D
 #define FLAG 0x7E
 #define ADDR_ST_RR 0x03
 #define ADDR_SR_RT 0x01
 #define SET_CTRL 0x03
 #define UA_CTRL 0x07
 
-#define FALSE 0
-#define TRUE 1
-volatile int STOP = FALSE;
+#define I0C 0x00
+#define I1C 0x40
+
+// RR and REJ signals
+#define RR0 0x05
+#define RR1 0x85
+#define REJ0 0x01
+#define REJ1 0x81
 
 // Alarm Functionality
 int alarmEnabled = FALSE;
@@ -36,15 +42,24 @@ typedef enum {
 unsigned char set_byte[5] = {FLAG, ADDR_ST_RR, SET_CTRL, ADDR_ST_RR^SET_CTRL, FLAG};
 unsigned char ua_byte[5] = {FLAG, ADDR_ST_RR, UA_CTRL, ADDR_ST_RR^UA_CTRL, FLAG};
 
+// Supervisory Frames
+unsigned char rr0_byte[5] = {FLAG, ADDR_ST_RR, RR0, ADDR_ST_RR^RR0, FLAG};
+unsigned char rr1_byte[5] = {FLAG, ADDR_ST_RR, RR1, ADDR_ST_RR^RR1, FLAG};
+unsigned char rej0_byte[5] = {FLAG, ADDR_ST_RR, REJ0, ADDR_ST_RR^REJ0, FLAG};
+unsigned char rej1_byte[5] = {FLAG, ADDR_ST_RR, REJ1, ADDR_ST_RR^REJ1, FLAG};
+
 // Alarm Handler
 void alarmHandler(int signal)
 {
     alarmEnabled = FALSE;
     alarmCount++;
-
 }
 
-// MISC
+// Functionality and MISC
+#define FALSE 0
+#define TRUE 1
+volatile int STOP = FALSE;
+
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 ////////////////////////////////////////////////
@@ -229,8 +244,6 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    // TODO: Implement this function
-
     return 0;
 }
 
@@ -239,7 +252,122 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    // TODO: Implement this function
+    unsigned char computed_bcc_2 = 0x00, received_bcc2;
+    unsigned char prev_packet, curr_packet, address, control;
+    unsigned char data[MAX_PAYLOAD_SIZE];
+    int packet_index = 0;
+    volatile int flag_received = FALSE, ignore_next = FALSE, first_data_byte = TRUE;
+    int state = 0;
+    int bytes;
+
+    while(STOP == FALSE){
+        bytes = readByteSerialPort(&curr_packet);
+        if(bytes == -1) return EXIT_FAILURE;
+
+        switch(state){ // Checks FLAG, Address, Control and BCC1
+            case start:
+                if(curr_packet == FLAG){
+                    state = flag_rcv;
+                    printf("Flag Received.\n");
+                } else {
+                    state = start;
+                }
+            break;
+            case flag_rcv:
+                if(curr_packet == FLAG){
+                    state = flag_rcv;
+                    printf("Flag Received.\n");
+                } else {
+                    address = curr_packet;
+                    state = a_rcv;
+                    printf("Address Received.\n");
+                }
+            break;
+            case a_rcv:
+                if(curr_packet == FLAG){
+                    state = flag_rcv;
+                    printf("Flag Received.\n");
+                } else {
+                    control = curr_packet;
+                    state = c_rcv;
+                    printf("Control Received.\n");
+                }
+            break;
+            case c_rcv:
+                if(curr_packet == FLAG){
+                    state = flag_rcv;
+                    printf("Flag Received.\n");
+                } else if ((address^control) == curr_packet){
+                    state = bcc_ok;
+                    printf("BCC1 OK, starting payload analysis.\n");
+                } else {
+                    if(control == I0C){
+                        bytes = writeBytesSerialPort(rej0_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    } else {
+                        bytes = writeBytesSerialPort(rej1_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    }
+                    printf("BCC1 wrong, sending REJ.\n");
+                }
+            break;
+            case bcc_ok:
+                if(curr_packet == ESC){
+                    ignore_next = TRUE;
+                    printf("Received ESC! Skipping..\n");
+                    break;
+                }
+                if(ignore_next == TRUE){
+                    ignore_next = FALSE;
+                    print("Previous data was ESC, disregarding current data meaning.\n");
+                } else if(curr_packet == FLAG && ignore_next == FALSE){
+                    state = 5;
+                    received_bcc2 = prev_packet;
+                    printf("Flag received! Checking BCC2..\n");
+                    break;
+                }
+
+                if(!first_data_byte){ // This is so prev_packet isn't analyzed while undefined 
+                    data[packet_index] = prev_packet;
+                    packet_index++;
+                    computed_bcc_2 ^= prev_packet;
+                }
+
+                prev_packet = curr_packet;
+                first_data_byte = FALSE;
+            break;
+            default: 
+                if(received_bcc2 == computed_bcc_2){
+                    if(control == I0C){
+                        bytes = writeBytesSerialPort(rr1_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    } else {
+                        bytes = writeBytesSerialPort(rr0_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    }
+                    printf("BCC2 OK! Sending RR.\n");
+                } else {
+                    if(control == I0C){
+                        bytes = writeBytesSerialPort(rej0_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    } else {
+                        bytes = writeBytesSerialPort(rej1_byte, 5);
+                        if(bytes == -1) return EXIT_FAILURE;
+                    }
+                    printf("BCC2 wrong, sending REJ.\n");
+                }
+                STOP = TRUE;
+            break;
+        }
+    }
+
+    if (packet == NULL || data == NULL || packet_index > MAX_PAYLOAD_SIZE) {
+        printf("memcpy error: invalid buffer\n");
+        return EXIT_FAILURE;
+    }
+    memcpy(packet, data, packet_index);
+
+    printf("Packet contains correct payload, returning..\n");
 
     return 0;
 }
