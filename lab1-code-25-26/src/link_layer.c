@@ -15,6 +15,7 @@
 #define ADDR_SR_RT 0x01
 #define SET_CTRL 0x03
 #define UA_CTRL 0x07
+#define C_DISC 0x0B
 
 #define I0C 0x00
 #define I1C 0x40
@@ -242,8 +243,71 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
+unsigned char calculateBCC2(unsigned char *message, int sizeMessage) {
+  unsigned char BCC2 = message[0];
+  for (int i = 1; i < sizeMessage; i++) {
+    BCC2 ^= message[i];
+  }
+
+  return BCC2;
+}
+
 int llwrite(const unsigned char *buf, int bufSize)
 {
+    unsigned char bcc2 = calculateBCC2(buf, bufSize);
+    unsigned char stuffed_message[MAX_PAYLOAD_SIZE];
+
+    // Init Stuffed Message
+    stuffed_message[0] = FLAG;
+    stuffed_message[1] = Adress;
+    stuffed_message[2] = C;
+    stuffed_message[3] = BCC1;
+
+    // Byte Stuffing of Data
+    int stuf_idx = 4;
+    for (int idx = 0; idx < bufSize; idx++) {
+        switch (buf[idx]) {
+            case FLAG:
+                stuffed_message[stuf_idx] = ESC;
+                stuffed_message[stuf_idx + 1] = 0x5e;
+                stuf_idx += 2;
+                break;
+            case ESC:
+                stuffed_message[stuf_idx] = ESC;
+                stuffed_message[stuf_idx + 1] = 0x5d;
+                stuf_idx += 2;
+                break;
+            default:
+                stuffed_message[stuf_idx] = buf[idx];
+                stuf_idx++;
+        }
+    }
+
+    // Byte Stuffing of BCC
+    switch (bcc2) {
+        case FLAG:
+            stuffed_message[stuf_idx] = ESC;
+            stuffed_message[stuf_idx + 1] = 0x5e;
+            stuf_idx += 2;
+            break;
+        case ESC:
+            stuffed_message[stuf_idx] = ESC;
+            stuffed_message[stuf_idx + 1] = 0x5d;
+            stuf_idx += 2;
+            break;
+        default:
+            stuffed_message[stuf_idx] = buf[idx];
+            stuf_idx++;
+    }
+
+    // Add the final flag
+    stuffed_message[stuf_idx] = FLAG;
+
+    // Send the message
+    int return_code = writeBytesSerialPort(&stuffed_message, stuf_idx);
+
+    // Alarme
+    // Verificar se recebe RR ou REJ
     return 0;
 }
 
@@ -345,6 +409,7 @@ int llread(unsigned char *packet)
                         bytes = writeBytesSerialPort(rr0_byte, 5);
                         if(bytes == -1) return EXIT_FAILURE;
                     }
+                    // TODO: esta mensagem vai ser usada para enviar para o write
                     printf("BCC2 OK! Sending RR.\n");
                 } else {
                     if(control == I0C){
@@ -366,18 +431,71 @@ int llread(unsigned char *packet)
         return EXIT_FAILURE;
     }
     memcpy(packet, data, packet_index);
-
     printf("Packet contains correct payload, returning..\n");
-
     return 0;
 }
 
 ////////////////////////////////////////////////
 // LLCLOSE
 ////////////////////////////////////////////////
-int llclose()
-{
-    // TODO: Implement this function
+int read_disc() {
+    int bytes;
+    unsigned char curr_packet;
+    while (STOP == FALSE) {
+        bytes = readByteSerialPort(&curr_packet);
+        if(bytes == -1) return EXIT_FAILURE;
+
+        // 
+    }
 
     return 0;
+}
+
+int read_ua() {
+    int bytes;
+    unsigned char curr_packet;
+    while (STOP == FALSE) {
+        bytes = readByteSerialPort(&curr_packet);
+        if(bytes == -1) return EXIT_FAILURE;
+
+        // 
+    }
+
+    return 0;
+}
+
+int llclose()
+{   
+    unsigned char DISC_ST_RR[5] = {FLAG, ADDR_ST_RR, C_DISC, ADDR_ST_RR^C_DISC, FLAG};
+    unsigned char DISC_SR_RT[5] = {FLAG, ADDR_SR_RT, C_DISC, ADDR_SR_RT^C_DISC, FLAG};
+    unsigned char UA_ST_RR[5] = {FLAG, ADDR_ST_RR, UA_CTRL, ADDR_ST_RR^UA_CTRL, FLAG};
+
+    // Transmitter
+    if (connectionParameters.role == LlTx) {
+        // write disc
+        writeBytesSerialPort(&DISC_ST_RR, 5);
+
+        // read disc
+        read_disc();
+
+        // write ua
+        writeBytesSerialPort(&UA_ST_RR, 5);
+        return 0;
+    } 
+
+    // Receiver
+    if (connectionParameters.role == LlRx) {
+        // read disc
+        read_disc();
+
+        // write disc
+        writeBytesSerialPort(&DISC_SR_RT, 5);
+
+        // read ua
+        read_ua();
+
+        return 0;
+    }
+
+    return  1;
 }
