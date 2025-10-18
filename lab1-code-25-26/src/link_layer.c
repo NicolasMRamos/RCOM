@@ -11,6 +11,8 @@
 // Byte Camps
 #define ESC 0x7D
 #define FLAG 0x7E
+#define ESC_toinsert 0x5D
+#define FLAG_toinsert 0x5E
 #define ADDR_ST_RR 0x03
 #define ADDR_SR_RT 0x01
 #define SET_CTRL 0x03
@@ -47,6 +49,10 @@ unsigned char rr0_byte[5] = {FLAG, ADDR_ST_RR, RR0, ADDR_ST_RR^RR0, FLAG};
 unsigned char rr1_byte[5] = {FLAG, ADDR_ST_RR, RR1, ADDR_ST_RR^RR1, FLAG};
 unsigned char rej0_byte[5] = {FLAG, ADDR_ST_RR, REJ0, ADDR_ST_RR^REJ0, FLAG};
 unsigned char rej1_byte[5] = {FLAG, ADDR_ST_RR, REJ1, ADDR_ST_RR^REJ1, FLAG};
+
+// Information Frame Identification
+int control_num = 0;
+unsigned char info_control = 0x00;
 
 // Alarm Handler
 void alarmHandler(int signal)
@@ -244,7 +250,161 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    return 0;
+    unsigned char bcc2 = compute_bcc2(buf, bufSize);
+    unsigned char frame[MAX_PAYLOAD_SIZE];
+    int index = 4, frameSize, bytes;
+
+    frame[0] = FLAG;
+    frame[1] = ADDR_ST_RR;
+    frame[2] = info_control;
+    frame[3] = info_control^ADDR_ST_RR;
+
+    for(int i = 0; i < bufSize; i++){
+        if(buf[i] == ESC){
+            frame[index] = ESC;
+            frame[index+1] = ESC_toinsert;
+            index += 2;
+        } else if (buf[i] == FLAG){
+            frame[index] = ESC;
+            frame[index+1] = FLAG_toinsert;
+            index += 2;
+        } else {
+            frame[index] = buf[i];
+            index++;
+        }
+    }
+
+    frame[index] = bcc2;
+    index++;
+    frame[index] = FLAG;
+    frameSize = index;
+
+    bytes = writeBytesSerialPort(frame,frameSize);
+    if(bytes == -1) return EXIT_FAILURE;
+    printf("Information Frame %d sent.\n", control_num);
+
+    // Wait for packet to arrive
+    sleep(1);
+
+    // Prepare for reading answer
+    int state = 0;
+    unsigned char address, control;
+    unsigned char byte;
+
+    // Alarm setup
+    struct sigaction act = {0};
+    act.sa_handler = &alarmHandler;
+    if (sigaction(SIGALRM, &act, NULL) == -1)
+    {
+        perror("sigaction");
+        exit(1);
+    }
+    alarmEnabled = TRUE;
+    alarm(3);
+    printf("Alarm configured.\n");
+
+    volatile int rej_received = FALSE;
+
+    // Reading answer
+    while(STOP == FALSE && alarmCount < 4){
+
+        bytes = readByteSerialPort(&byte);
+        if(bytes == -1) return EXIT_FAILURE;
+        printf("Byte read: 0x%02X\n", byte);
+
+        if(alarmEnabled == FALSE){
+            int ret = writeBytesSerialPort(frame, frameSize);
+            if(ret == -1) return EXIT_FAILURE;
+            printf("Timeout, resending frame.\n");
+
+            alarmEnabled = TRUE;
+            alarm(3);
+            state = start;
+            printf("Alarm configured again.\n");
+        } else if (rej_received == TRUE){
+            int ret = writeBytesSerialPort(frame, frameSize);
+            if(ret == -1) return EXIT_FAILURE;
+            printf("REJ received, resending frame.\n");
+
+            rej_received = FALSE;
+            alarmEnabled = TRUE;
+            alarm(3);
+            state = start;
+            printf("Alarm restarted.\n");
+        }
+
+        switch(state){
+            case start:
+                if(byte == FLAG){
+                    state = flag_rcv;
+                } else {
+                    state = start;
+                }
+            break;
+            case flag_rcv:
+                if(byte == FLAG){
+                    state = flag_rcv;
+                } else {
+                    address = byte;
+                    state = a_rcv;
+                }
+            break;
+            case a_rcv:
+                if(byte == FLAG){
+                    state = flag_rcv;
+                } else {
+                    control = byte;
+                    state = c_rcv;
+                }
+            break;
+            case c_rcv:
+                if(byte == FLAG){
+                    state = flag_rcv;
+                } else if ((address^control) == byte){
+                    state = bcc_ok;
+                } else {
+                    state = start;
+                }
+            break;
+            case bcc_ok:
+                if(byte == FLAG){
+                    if(control == RR0){
+                        control_num = 0;
+                        info_control = 0x00;
+                        printf("RR0 received.\n");
+                        STOP = TRUE;
+                    } else if(control == RR1){
+                        control_num = 1;
+                        info_control = 0x40;
+                        printf("RR1 received.\n");
+                        STOP = TRUE;
+                    } else if(control == REJ0){
+                        printf("REJ0 received, resending information packet 0.\n");
+                        rej_received = TRUE;
+                        STOP = FALSE;
+                    } else {
+                        printf("REJ1 received, resending information packet 1.\n");
+                        rej_received = TRUE;
+                        STOP = FALSE;
+                    }
+                } else {
+                    state = start;
+                }
+            break;
+            default: break;
+        }
+
+    }
+
+    return frameSize;
+}
+
+unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
+    unsigned char bcc2 = 0x00;
+    for(int i = 0; i < bufSize; i++){
+        bcc2 ^= buf[i];
+    }
+    return bcc2;
 }
 
 ////////////////////////////////////////////////
