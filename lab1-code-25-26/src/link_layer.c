@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
 
 // Byte Camps
 #define ESC 0x7D
@@ -88,6 +89,7 @@ int llopen(LinkLayer connectionParameters)
     role = connectionParameters.role;
 
     int state = start;
+    STOP = FALSE;
     unsigned char address, control;
 
     /////////////////
@@ -101,20 +103,17 @@ int llopen(LinkLayer connectionParameters)
         if(bytes == -1) return EXIT_FAILURE;
         printf("SET byte sent.\n");
 
-        // Wait for it to arrive
-        sleep(1);
-
         // Setup alarm
         struct sigaction act = {0};
         act.sa_handler = &alarmHandler;
         if (sigaction(SIGALRM, &act, NULL) == -1)
         {
             perror("sigaction");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         alarmEnabled = TRUE;
         alarm(3);
-        printf("Alarm configured.\n");
+        printf("Alarm configured for UA reading.\n");
 
         // Read UA byte
         while(STOP == FALSE && alarmCount < 4){
@@ -132,8 +131,9 @@ int llopen(LinkLayer connectionParameters)
 
                 alarmEnabled = TRUE;
                 alarm(3);
+                printf("Alarm configured for UA reading again.\n");
+
                 state = start;
-                printf("Alarm configured again.\n");
             }
 
             // State machine for reading UA byte
@@ -174,7 +174,6 @@ int llopen(LinkLayer connectionParameters)
                     if(byte == FLAG){
                         printf("UA byte read. Disabling alarm.\n");
 
-                        // Disable alarm after UA byte is read
                         alarmEnabled = FALSE;
                         alarm(0);
 
@@ -198,7 +197,6 @@ int llopen(LinkLayer connectionParameters)
             int bytes = readByteSerialPort(&byte);
             if(bytes == -1) return EXIT_FAILURE;
             printf("Byte read: 0x%02X\n", byte);
-            
 
             // State machine for reading SET byte
             switch(state){
@@ -256,6 +254,15 @@ int llopen(LinkLayer connectionParameters)
     return 0;
 }
 
+// BCC2 computation through frame payload
+unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
+    unsigned char bcc2 = 0x00;
+    for(int i = 0; i < bufSize; i++){
+        bcc2 ^= buf[i];
+    }
+    return bcc2;
+}
+
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
@@ -298,11 +305,10 @@ int llwrite(const unsigned char *buf, int bufSize)
     if(bytes == -1) return EXIT_FAILURE;
     printf("Information Frame %d sent.\n", control_num);
 
-    // Wait for packet to arrive
     sleep(1);
 
     // Prepare for reading answer
-    int state = 0;
+    int state = start;
     unsigned char address, control;
     unsigned char byte;
 
@@ -312,13 +318,16 @@ int llwrite(const unsigned char *buf, int bufSize)
     if (sigaction(SIGALRM, &act, NULL) == -1)
     {
         perror("sigaction");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     alarmEnabled = TRUE;
     alarm(3);
-    printf("Alarm configured.\n");
+    printf("Alarm configured for answer reading.\n");
 
     volatile int rej_received = FALSE;
+
+    STOP = FALSE;
+    alarmCount = 0;
 
     // Reading answer
     while(STOP == FALSE && alarmCount < 4){
@@ -335,18 +344,21 @@ int llwrite(const unsigned char *buf, int bufSize)
 
             alarmEnabled = TRUE;
             alarm(3);
+            printf("Alarm configured for answer reading again.\n");
+
             state = start;
-            printf("Alarm configured again.\n");
         } else if (rej_received == TRUE){
             int ret = writeBytesSerialPort(frame, frameSize);
             if(ret == -1) return EXIT_FAILURE;
             printf("REJ received, resending frame.\n");
 
             rej_received = FALSE;
+
             alarmEnabled = TRUE;
             alarm(3);
+            printf("Alarm restarted for answer reading.\n");
+
             state = start;
-            printf("Alarm restarted.\n");
         }
 
         switch(state){
@@ -388,19 +400,35 @@ int llwrite(const unsigned char *buf, int bufSize)
                         control_num = 0;
                         info_control = 0x00;
                         printf("RR0 received.\n");
+
+                        alarmEnabled = FALSE;
+                        alarm(0);
+
                         STOP = TRUE;
                     } else if(control == RR1){
                         control_num = 1;
                         info_control = 0x40;
                         printf("RR1 received.\n");
+
+                        alarmEnabled = FALSE;
+                        alarm(0);
+
                         STOP = TRUE;
                     } else if(control == REJ0){
                         printf("REJ0 received, resending information packet 0.\n");
                         rej_received = TRUE;
+
+                        alarmEnabled = FALSE;
+                        alarm(0);
+
                         STOP = FALSE;
                     } else {
                         printf("REJ1 received, resending information packet 1.\n");
                         rej_received = TRUE;
+
+                        alarmEnabled = FALSE;
+                        alarm(0);
+
                         STOP = FALSE;
                     }
                 } else {
@@ -415,15 +443,6 @@ int llwrite(const unsigned char *buf, int bufSize)
     return frameSize;
 }
 
-// BCC2 computation through frame payload
-unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
-    unsigned char bcc2 = 0x00;
-    for(int i = 0; i < bufSize; i++){
-        bcc2 ^= buf[i];
-    }
-    return bcc2;
-}
-
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
@@ -434,9 +453,10 @@ int llread(unsigned char *packet)
     unsigned char prev_packet, curr_packet, address, control;
     unsigned char data[MAX_PAYLOAD_SIZE];
     int packet_index = 0;
-    volatile int flag_received = FALSE, ignore_next = FALSE, first_data_byte = TRUE;
-    int state = 0;
+    volatile int ignore_next = FALSE, first_data_byte = TRUE;
+    int state = start;
     int bytes;
+    STOP = FALSE;
 
     // Reading frame
     while(STOP == FALSE){
@@ -448,7 +468,6 @@ int llread(unsigned char *packet)
             case start:
                 if(curr_packet == FLAG){
                     state = flag_rcv;
-                    printf("Flag Received.\n");
                 } else {
                     state = start;
                 }
@@ -456,27 +475,22 @@ int llread(unsigned char *packet)
             case flag_rcv:
                 if(curr_packet == FLAG){
                     state = flag_rcv;
-                    printf("Flag Received.\n");
                 } else {
                     address = curr_packet;
                     state = a_rcv;
-                    printf("Address Received.\n");
                 }
             break;
             case a_rcv:
                 if(curr_packet == FLAG){
                     state = flag_rcv;
-                    printf("Flag Received.\n");
                 } else {
                     control = curr_packet;
                     state = c_rcv;
-                    printf("Control Received.\n");
                 }
             break;
             case c_rcv:
                 if(curr_packet == FLAG){
                     state = flag_rcv;
-                    printf("Flag Received.\n");
                 } else if ((address^control) == curr_packet){
                     state = bcc_ok;
                     printf("BCC1 OK, starting payload analysis.\n");
@@ -499,7 +513,7 @@ int llread(unsigned char *packet)
                 }
                 if(ignore_next == TRUE){
                     ignore_next = FALSE;
-                    print("Previous data was ESC, disregarding current data meaning.\n");
+                    printf("Previous data was ESC, disregarding current data meaning.\n");
                 } else if(curr_packet == FLAG && ignore_next == FALSE){
                     state = 5;
                     received_bcc2 = prev_packet;
@@ -558,6 +572,7 @@ int llread(unsigned char *packet)
 int llclose()
 {
     int bytes;
+    STOP = FALSE;
 
     if(role == LlTx){
 
@@ -566,7 +581,7 @@ int llclose()
         if(bytes == -1) return EXIT_FAILURE;
 
         // Prepare for reading
-        int state = 0;
+        int state = start;
         unsigned char byte;
         unsigned char address, control;
 
@@ -576,18 +591,29 @@ int llclose()
         if (sigaction(SIGALRM, &act, NULL) == -1)
         {
             perror("sigaction");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         alarmEnabled = TRUE;
         alarm(3);
-        printf("Alarm configured.\n");
+        printf("Alarm configured for DISC reading.\n");
 
         // Reading DISC byte
-        while(STOP == FALSE){
+        while(STOP == FALSE && alarmCount < 4){
 
             bytes = readByteSerialPort(&byte);
             if(bytes == -1) return EXIT_FAILURE;
             printf("Byte read: 0x%02X\n", byte);
+
+            if (alarmEnabled == FALSE) {
+                bytes = writeBytesSerialPort(disc_byte, 5);
+                if(bytes == -1) return EXIT_FAILURE;
+                printf("Timeout, resending DISC byte..\n");
+
+                alarmEnabled = TRUE;
+                alarm(3);
+
+                state = start;
+            }
 
             switch(state){
                 case start:
@@ -626,10 +652,12 @@ int llclose()
                     if(byte == FLAG){
                         printf("DISC byte read, sending UA byte..\n");
                         
-                        // DISC byte read, send UA byte
                         int ret = writeBytesSerialPort(ua_byte, 5);
                         if(ret == -1) return EXIT_FAILURE;
                         printf("UA byte sent.\n");
+
+                        alarmEnabled = FALSE;
+                        alarm(0);
 
                         STOP = TRUE;
                     } else {
@@ -643,7 +671,7 @@ int llclose()
     } else {
 
         // Prepare for reading
-        int state = 0;
+        int state = start;
         unsigned char byte;
         unsigned char address, control;
 
@@ -691,7 +719,6 @@ int llclose()
                     if(byte == FLAG){
                         printf("DISC byte read, sending DISC byte..\n");
                         
-                        // DISC byte read, send DISC back
                         int ret = writeBytesSerialPort(disc_byte, 5);
                         if(ret == -1) return EXIT_FAILURE;
                         printf("DISC byte sent.\n");
@@ -705,7 +732,70 @@ int llclose()
             }
         }
 
+        STOP = FALSE;
+        state = start;
+        
+        // Reading UA byte
+        while(STOP == FALSE){
+
+            bytes = readByteSerialPort(&byte);
+            if(bytes == -1) return EXIT_FAILURE;
+            printf("Byte read: 0x%02X\n", byte);
+
+            switch(state){
+                case start:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case flag_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        address = byte;
+                        state = a_rcv;
+                    }
+                break;
+                case a_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        control = byte;
+                        state = c_rcv;
+                    }
+                break;
+                case c_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else if ((address^control) == byte){
+                        state = bcc_ok;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case bcc_ok:
+                    if(byte == FLAG){
+                        printf("UA byte read.\n");
+
+                        STOP = TRUE;
+                    } else {
+                        state = start;
+                    }
+                break;
+                default: break;
+            }
+        }
     }
+
+    if (closeSerialPort() < 0)
+    {
+        perror("closeSerialPort");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Serial port closed.\n");
 
     return 0;
 }

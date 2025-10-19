@@ -1,5 +1,6 @@
 // State Machine (purely for reutilization purposes)
 
+/*
 #include <stdlib.h>
 #include "link_layer.h"
 
@@ -74,3 +75,5 @@ int general_state_machine(){
         default: break;
     }
 }
+
+*/
