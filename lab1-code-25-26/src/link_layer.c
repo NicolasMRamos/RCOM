@@ -17,6 +17,7 @@
 #define ADDR_SR_RT 0x01
 #define SET_CTRL 0x03
 #define UA_CTRL 0x07
+#define DISC_CTRL 0x0B
 
 #define I0C 0x00
 #define I1C 0x40
@@ -54,6 +55,12 @@ unsigned char rej1_byte[5] = {FLAG, ADDR_ST_RR, REJ1, ADDR_ST_RR^REJ1, FLAG};
 int control_num = 0;
 unsigned char info_control = 0x00;
 
+// DISC Byte
+unsigned char disc_byte[5] = {FLAG, ADDR_ST_RR, DISC_CTRL, ADDR_ST_RR^DISC_CTRL, FLAG};
+
+// Role Saving
+LinkLayerRole role;
+
 // Alarm Handler
 void alarmHandler(int signal)
 {
@@ -76,6 +83,9 @@ int llopen(LinkLayer connectionParameters)
     int ret = openSerialPort(connectionParameters.serialPort,connectionParameters.baudRate);
     if(ret == -1) return EXIT_FAILURE;
     printf("Serial port opened.\n");
+
+    // Role Saving
+    role = connectionParameters.role;
 
     int state = start;
     unsigned char address, control;
@@ -242,6 +252,7 @@ int llopen(LinkLayer connectionParameters)
             }
         }
     }
+    printf("Connection established, returning now.\n");
     return 0;
 }
 
@@ -254,11 +265,13 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char frame[MAX_PAYLOAD_SIZE];
     int index = 4, frameSize, bytes;
 
+    // Header building
     frame[0] = FLAG;
     frame[1] = ADDR_ST_RR;
     frame[2] = info_control;
     frame[3] = info_control^ADDR_ST_RR;
 
+    // Payload building
     for(int i = 0; i < bufSize; i++){
         if(buf[i] == ESC){
             frame[index] = ESC;
@@ -274,11 +287,13 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
 
+    // Trailer building
     frame[index] = bcc2;
     index++;
     frame[index] = FLAG;
     frameSize = index;
 
+    // Write frame
     bytes = writeBytesSerialPort(frame,frameSize);
     if(bytes == -1) return EXIT_FAILURE;
     printf("Information Frame %d sent.\n", control_num);
@@ -312,6 +327,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         if(bytes == -1) return EXIT_FAILURE;
         printf("Byte read: 0x%02X\n", byte);
 
+        // Alarm/Rejection check
         if(alarmEnabled == FALSE){
             int ret = writeBytesSerialPort(frame, frameSize);
             if(ret == -1) return EXIT_FAILURE;
@@ -399,6 +415,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     return frameSize;
 }
 
+// BCC2 computation through frame payload
 unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
     unsigned char bcc2 = 0x00;
     for(int i = 0; i < bufSize; i++){
@@ -412,6 +429,7 @@ unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
+    // Prepare for reading frame
     unsigned char computed_bcc_2 = 0x00, received_bcc2;
     unsigned char prev_packet, curr_packet, address, control;
     unsigned char data[MAX_PAYLOAD_SIZE];
@@ -420,11 +438,13 @@ int llread(unsigned char *packet)
     int state = 0;
     int bytes;
 
+    // Reading frame
     while(STOP == FALSE){
         bytes = readByteSerialPort(&curr_packet);
         if(bytes == -1) return EXIT_FAILURE;
+        printf("Byte read: 0x%02X\n", curr_packet);
 
-        switch(state){ // Checks FLAG, Address, Control and BCC1
+        switch(state){
             case start:
                 if(curr_packet == FLAG){
                     state = flag_rcv;
@@ -537,7 +557,155 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose()
 {
-    // TODO: Implement this function
+    int bytes;
+
+    if(role == LlTx){
+
+        // Send DISC
+        bytes = writeBytesSerialPort(disc_byte, 5);
+        if(bytes == -1) return EXIT_FAILURE;
+
+        // Prepare for reading
+        int state = 0;
+        unsigned char byte;
+        unsigned char address, control;
+
+        // Setup alarm
+        struct sigaction act = {0};
+        act.sa_handler = &alarmHandler;
+        if (sigaction(SIGALRM, &act, NULL) == -1)
+        {
+            perror("sigaction");
+            exit(1);
+        }
+        alarmEnabled = TRUE;
+        alarm(3);
+        printf("Alarm configured.\n");
+
+        // Reading DISC byte
+        while(STOP == FALSE){
+
+            bytes = readByteSerialPort(&byte);
+            if(bytes == -1) return EXIT_FAILURE;
+            printf("Byte read: 0x%02X\n", byte);
+
+            switch(state){
+                case start:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case flag_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        address = byte;
+                        state = a_rcv;
+                    }
+                break;
+                case a_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        control = byte;
+                        state = c_rcv;
+                    }
+                break;
+                case c_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else if ((address^control) == byte){
+                        state = bcc_ok;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case bcc_ok:
+                    if(byte == FLAG){
+                        printf("DISC byte read, sending UA byte..\n");
+                        
+                        // DISC byte read, send UA byte
+                        int ret = writeBytesSerialPort(ua_byte, 5);
+                        if(ret == -1) return EXIT_FAILURE;
+                        printf("UA byte sent.\n");
+
+                        STOP = TRUE;
+                    } else {
+                        state = start;
+                    }
+                break;
+                default: break;
+            }
+        }
+
+    } else {
+
+        // Prepare for reading
+        int state = 0;
+        unsigned char byte;
+        unsigned char address, control;
+
+        // Reading DISC byte
+        while(STOP == FALSE){
+
+            bytes = readByteSerialPort(&byte);
+            if(bytes == -1) return EXIT_FAILURE;
+            printf("Byte read: 0x%02X\n", byte);
+
+            switch(state){
+                case start:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case flag_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        address = byte;
+                        state = a_rcv;
+                    }
+                break;
+                case a_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        control = byte;
+                        state = c_rcv;
+                    }
+                break;
+                case c_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else if ((address^control) == byte){
+                        state = bcc_ok;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case bcc_ok:
+                    if(byte == FLAG){
+                        printf("DISC byte read, sending DISC byte..\n");
+                        
+                        // DISC byte read, send DISC back
+                        int ret = writeBytesSerialPort(disc_byte, 5);
+                        if(ret == -1) return EXIT_FAILURE;
+                        printf("DISC byte sent.\n");
+
+                        STOP = TRUE;
+                    } else {
+                        state = start;
+                    }
+                break;
+                default: break;
+            }
+        }
+
+    }
 
     return 0;
 }
