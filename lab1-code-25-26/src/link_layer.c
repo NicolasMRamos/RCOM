@@ -120,7 +120,7 @@ int llopen(LinkLayer connectionParameters)
 
             unsigned char byte;
             int bytes = readByteSerialPort(&byte);
-            if(bytes == -1) return EXIT_FAILURE;
+            if(bytes == -1) printf("Error byte read, continuing.\n");
             printf("Byte read: 0x%02X\n", byte);
 
             // If timeout resend SET byte
@@ -195,7 +195,7 @@ int llopen(LinkLayer connectionParameters)
         while(STOP == FALSE){
             unsigned char byte;
             int bytes = readByteSerialPort(&byte);
-            if(bytes == -1) return EXIT_FAILURE;
+            if(bytes == -1) printf("Error byte read, continuing.\n");
             printf("Byte read: 0x%02X\n", byte);
 
             // State machine for reading SET byte
@@ -333,7 +333,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     while(STOP == FALSE && alarmCount < 4){
 
         bytes = readByteSerialPort(&byte);
-        if(bytes == -1) return EXIT_FAILURE;
+        if(bytes == -1) printf("Error byte read, continuing.\n");
         printf("Byte read: 0x%02X\n", byte);
 
         // Alarm/Rejection check
@@ -461,7 +461,7 @@ int llread(unsigned char *packet)
     // Reading frame
     while(STOP == FALSE){
         bytes = readByteSerialPort(&curr_packet);
-        if(bytes == -1) return EXIT_FAILURE;
+        if(bytes == -1) printf("Error byte read, continuing.\n");
         printf("Byte read: 0x%02X\n", curr_packet);
 
         switch(state){
@@ -601,7 +601,7 @@ int llclose()
         while(STOP == FALSE && alarmCount < 4){
 
             bytes = readByteSerialPort(&byte);
-            if(bytes == -1) return EXIT_FAILURE;
+            if(bytes == -1) printf("Error byte read, continuing.\n");
             printf("Byte read: 0x%02X\n", byte);
 
             if (alarmEnabled == FALSE) {
@@ -679,7 +679,7 @@ int llclose()
         while(STOP == FALSE){
 
             bytes = readByteSerialPort(&byte);
-            if(bytes == -1) return EXIT_FAILURE;
+            if(bytes == -1) printf("Error byte read, continuing.\n");
             printf("Byte read: 0x%02X\n", byte);
 
             switch(state){
@@ -739,7 +739,7 @@ int llclose()
         while(STOP == FALSE){
 
             bytes = readByteSerialPort(&byte);
-            if(bytes == -1) return EXIT_FAILURE;
+            if(bytes == -1) printf("Error byte read, continuing.\n");
             printf("Byte read: 0x%02X\n", byte);
 
             switch(state){
