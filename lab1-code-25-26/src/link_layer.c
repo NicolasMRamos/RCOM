@@ -26,9 +26,15 @@
 #define REJ0 0x01
 #define REJ1 0x81
 
+// DISC
+#define DISC 0x0B
+
 // Alarm Functionality
 int alarmEnabled = FALSE;
 int alarmCount = 0;
+
+// Role Saving
+int role;
 
 // State Machine States
 typedef enum {
@@ -48,7 +54,7 @@ unsigned char rr0_byte[5] = {FLAG, ADDR_ST_RR, RR0, ADDR_ST_RR^RR0, FLAG};
 unsigned char rr1_byte[5] = {FLAG, ADDR_ST_RR, RR1, ADDR_ST_RR^RR1, FLAG};
 unsigned char rej0_byte[5] = {FLAG, ADDR_ST_RR, REJ0, ADDR_ST_RR^REJ0, FLAG};
 unsigned char rej1_byte[5] = {FLAG, ADDR_ST_RR, REJ1, ADDR_ST_RR^REJ1, FLAG};
-
+unsigned char disc_byte[5] = {FLAG, ADDR_ST_RR, DISC, ADDR_ST_RR^DISC, FLAG};
 // Alarm Handler
 void alarmHandler(int signal)
 {
@@ -438,31 +444,6 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 // LLCLOSE
 ////////////////////////////////////////////////
-int read_disc() {
-    int bytes;
-    unsigned char curr_packet;
-    while (STOP == FALSE) {
-        bytes = readByteSerialPort(&curr_packet);
-        if(bytes == -1) return EXIT_FAILURE;
-
-        // 
-    }
-
-    return 0;
-}
-
-int read_ua() {
-    int bytes;
-    unsigned char curr_packet;
-    while (STOP == FALSE) {
-        bytes = readByteSerialPort(&curr_packet);
-        if(bytes == -1) return EXIT_FAILURE;
-
-        // 
-    }
-
-    return 0;
-}
 
 int llclose()
 {   
@@ -470,31 +451,150 @@ int llclose()
     unsigned char DISC_SR_RT[5] = {FLAG, ADDR_SR_RT, C_DISC, ADDR_SR_RT^C_DISC, FLAG};
     unsigned char UA_ST_RR[5] = {FLAG, ADDR_ST_RR, UA_CTRL, ADDR_ST_RR^UA_CTRL, FLAG};
 
-    // Transmitter
-    if (connectionParameters.role == LlTx) {
-        // write disc
-        writeBytesSerialPort(&DISC_ST_RR, 5);
+    
+    /////////////////
+    // TRANSMITTER //
+    /////////////////
+    if(connectionParameters.role == LlTx){
 
-        // read disc
-        read_disc();
+        // Write SET byte
+        int bytes = writeBytesSerialPort(set_byte, 5);
+        if(bytes == -1) return EXIT_FAILURE;
+        printf("SET byte sent.\n");
 
-        // write ua
-        writeBytesSerialPort(&UA_ST_RR, 5);
-        return 0;
-    } 
+        while(STOP == FALSE && alarmCount < 4){
 
-    // Receiver
-    if (connectionParameters.role == LlRx) {
-        // read disc
-        read_disc();
+            unsigned char byte;
+            int bytes = readByteSerialPort(&byte);
+            if(bytes == -1) return EXIT_FAILURE;
+            printf("Byte read: 0x%02X\n", byte);
 
-        // write disc
-        writeBytesSerialPort(&DISC_SR_RT, 5);
+            // If timeout resend SET byte
+            if(alarmEnabled == FALSE){
+                int ret = writeBytesSerialPort(set_byte, 5);
+                if(ret == -1) return EXIT_FAILURE;
+                printf("Timeout, resending SET byte.\n");
 
-        // read ua
-        read_ua();
+                alarmEnabled = TRUE;
+                alarm(3);
+                state = start;
+                printf("Alarm configured again.\n");
+            }
 
-        return 0;
+            // State machine for reading UA byte
+            switch(state){
+                case start:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case flag_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        address = byte;
+                        state = a_rcv;
+                    }
+                break;
+                case a_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        control = byte;
+                        state = c_rcv;
+                    }
+                break;
+                case c_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else if ((address^control) == byte){
+                        state = bcc_ok;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case bcc_ok:
+                    if(byte == FLAG){
+                        printf("UA byte read. Disabling alarm.\n");
+
+                        // Disable alarm after UA byte is read
+                        alarmEnabled = FALSE;
+                        alarm(0);
+
+                        STOP = TRUE;
+                    } else {
+                        state = start;
+                    }
+                break;
+                default: break;
+            }
+        }
+
+    } else {
+
+    //////////////
+    // RECEIVER //
+    //////////////
+    while(STOP == FALSE){
+            unsigned char byte;
+            int bytes = readByteSerialPort(&byte);
+            if(bytes == -1) return EXIT_FAILURE;
+            printf("Byte read: 0x%02X\n", byte);
+            
+
+            // State machine for reading SET byte
+            switch(state){
+                case start:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case flag_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        address = byte;
+                        state = a_rcv;
+                    }
+                break;
+                case a_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else {
+                        control = byte;
+                        state = c_rcv;
+                    }
+                break;
+                case c_rcv:
+                    if(byte == FLAG){
+                        state = flag_rcv;
+                    } else if ((address^control) == byte){
+                        state = bcc_ok;
+                    } else {
+                        state = start;
+                    }
+                break;
+                case bcc_ok:
+                    if(byte == FLAG){
+                        printf("SET byte read, sending UA byte..\n");
+                        
+                        // SET byte read, send UA byte
+                        int ret = writeBytesSerialPort(ua_byte, 5);
+                        if(ret == -1) return EXIT_FAILURE;
+                        printf("UA byte sent.\n");
+
+                        STOP = TRUE;
+                    } else {
+                        state = start;
+                    }
+                break;
+                default: break;
+            }
+        }
     }
 
     return  1;
