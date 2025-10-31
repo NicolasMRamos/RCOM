@@ -269,7 +269,7 @@ unsigned char compute_bcc2(const unsigned char *buf, int bufSize){
 int llwrite(const unsigned char *buf, int bufSize)
 {
     unsigned char bcc2 = compute_bcc2(buf, bufSize);
-    unsigned char frame[MAX_PAYLOAD_SIZE];
+    unsigned char frame[2 * MAX_PAYLOAD_SIZE + 6];
     int index = 4, frameSize, bytes;
 
     // Header building
@@ -295,7 +295,17 @@ int llwrite(const unsigned char *buf, int bufSize)
     }
 
     // Trailer building
-    frame[index] = bcc2;
+    if (bcc2 == ESC) { // BCC2 Stuffing
+        frame[index] = ESC;
+        index++;
+        frame[index] = ESC_toinsert;
+    } else if (bcc2 == FLAG) {
+        frame[index] = ESC;
+        index++;
+        frame[index] = FLAG_toinsert;
+    } else {
+        frame[index] = bcc2;
+    }
     index++;
     frame[index] = FLAG;
     frameSize = index;
@@ -506,15 +516,24 @@ int llread(unsigned char *packet)
                 }
             break;
             case bcc_ok:
-                if(curr_packet == ESC){
-                    ignore_next = TRUE;
-                    printf("Received ESC! Skipping..\n");
+                if (ignore_next) {
+                    // Process next byte after ESC
+                    ignore_next = FALSE;
+                    if (curr_packet == FLAG_toinsert) curr_packet = FLAG;
+                    else if (curr_packet == ESC_toinsert) curr_packet = ESC;
+                    data[packet_index] = curr_packet;
+                    packet_index++;
+                    computed_bcc_2 ^= curr_packet;
                     break;
                 }
-                if(ignore_next == TRUE){
-                    ignore_next = FALSE;
-                    printf("Previous data was ESC, disregarding current data meaning.\n");
-                } else if(curr_packet == FLAG && ignore_next == FALSE){
+
+                if (curr_packet == ESC) {
+                    ignore_next = TRUE;
+                    printf("Received ESC! Next byte will be translated.\n");
+                    break;
+                }
+
+                if (curr_packet == FLAG) {
                     state = 5;
                     received_bcc2 = prev_packet;
                     printf("Flag received! Checking BCC2..\n");
@@ -563,7 +582,7 @@ int llread(unsigned char *packet)
 
     printf("Packet contains correct payload, returning..\n");
 
-    return 0;
+    return packet_index;
 }
 
 ////////////////////////////////////////////////

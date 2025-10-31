@@ -19,7 +19,7 @@
 // Auxiliary functions definitions (implementations in the end of the file)
 int buildControlPacket(unsigned char *ctrl_packet, const long fileSize, const char *filename, int *ctrl_packetSize, int is_start);
 int buildDataPacket(unsigned char *data_packet, const int bufferSize, const unsigned char *buffer);
-int parseControlPacket(const unsigned char *ctrl_packet, const int ctrl_packetSize, char *filename, long *fileSize);
+int parseControlPacket(const unsigned char *ctrl_packet, char *filename, long *fileSize);
 
 // Main
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
@@ -112,6 +112,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         // Read data packet
         packetSize = llread(packet);
+        printf("llread returned %d bytes\n", packetSize);
         if(packetSize == -1){
             printf("Error: llread failed\n");
             exit(EXIT_FAILURE);
@@ -120,7 +121,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         // Acquire file configs
         char newFileName[256];
         long newFileSize = 0;
-        parseControlPacket(packet, packetSize, newFileName, &newFileSize);
+        parseControlPacket(packet, newFileName, &newFileSize);
 
         // Open new file to write on
         FILE *file = fopen(newFileName, "wb");
@@ -140,11 +141,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 exit(EXIT_FAILURE);
             }
 
-            if(packet[0] == 0x03){ // Received END control packet
+            if(packet[0] == END){ // Received END control packet
                 break; 
             }
 
-            if(packet[0] == 0x01){ // Received data packet
+            if(packet[0] == DATA_PKT_CTRL){ // Received data packet
                 int dataLength = (packet[1] << 8) | packet[2];
                 fwrite(&packet[3], 1, dataLength, file);
                 totalWritten += dataLength;
@@ -225,7 +226,7 @@ int buildDataPacket(unsigned char *data_packet, const int bufferSize, const unsi
     return bufferSize + 3;
 }
 
-int parseControlPacket(const unsigned char *ctrl_packet, const int ctrl_packetSize, char *filename, long *fileSize){
+int parseControlPacket(const unsigned char *ctrl_packet, char *filename, long *fileSize){
 
     // Reconstruct file size
     *fileSize = ((long)ctrl_packet[3] << 24) | ((long)ctrl_packet[4] << 16) | ((long)ctrl_packet[5] << 8)  | ((long)ctrl_packet[6]);
