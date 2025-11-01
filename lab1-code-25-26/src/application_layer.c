@@ -118,7 +118,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         // Read data packet
         packetSize = llread(packet);
-        printf("llread returned %d bytes\n", packetSize);
         if(packetSize == -1){
             printf("Error: llread failed\n");
             exit(EXIT_FAILURE);

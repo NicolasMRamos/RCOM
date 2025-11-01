@@ -8,6 +8,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <termios.h>
+
+extern int fd;
 
 // Byte Camps
 #define ESC 0x7D
@@ -315,8 +318,6 @@ int llwrite(const unsigned char *buf, int bufSize)
     if(bytes == -1) return EXIT_FAILURE;
     printf("Information Frame %d sent.\n", control_num);
 
-    sleep(1);
-
     // Prepare for reading answer
     int state = start;
     unsigned char address, control;
@@ -334,8 +335,6 @@ int llwrite(const unsigned char *buf, int bufSize)
     alarm(3);
     printf("Alarm configured for answer reading.\n");
 
-    volatile int rej_received = FALSE;
-
     STOP = FALSE;
     alarmCount = 0;
 
@@ -346,7 +345,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         if(bytes == -1) printf("Error byte read, continuing.\n");
         printf("Byte read: 0x%02X\n", byte);
 
-        // Alarm/Rejection check
+        // Alarm check
         if(alarmEnabled == FALSE){
             int ret = writeBytesSerialPort(frame, frameSize);
             if(ret == -1) return EXIT_FAILURE;
@@ -355,18 +354,6 @@ int llwrite(const unsigned char *buf, int bufSize)
             alarmEnabled = TRUE;
             alarm(3);
             printf("Alarm configured for answer reading again.\n");
-
-            state = start;
-        } else if (rej_received == TRUE){
-            int ret = writeBytesSerialPort(frame, frameSize);
-            if(ret == -1) return EXIT_FAILURE;
-            printf("REJ received, resending frame.\n");
-
-            rej_received = FALSE;
-
-            alarmEnabled = TRUE;
-            alarm(3);
-            printf("Alarm restarted for answer reading.\n");
 
             state = start;
         }
@@ -424,22 +411,17 @@ int llwrite(const unsigned char *buf, int bufSize)
                         alarm(0);
 
                         STOP = TRUE;
-                    } else if(control == REJ0){
-                        printf("REJ0 received, resending information packet 0.\n");
-                        rej_received = TRUE;
+                    } else if (control == REJ0 || control == REJ1) {
+                        printf("REJ%c received, resending information packet %d.\n", (control == REJ0 ? '0' : '1'), (control == REJ0 ? 0 : 1));
 
-                        alarmEnabled = FALSE;
-                        alarm(0);
+                        int ret = writeBytesSerialPort(frame, frameSize);
+                        if (ret == -1) return EXIT_FAILURE;
 
+                        alarmEnabled = TRUE;
+                        alarm(3);
+                        state = start;
                         STOP = FALSE;
-                    } else {
-                        printf("REJ1 received, resending information packet 1.\n");
-                        rej_received = TRUE;
-
-                        alarmEnabled = FALSE;
-                        alarm(0);
-
-                        STOP = FALSE;
+                        continue;
                     }
                 } else {
                     state = start;
@@ -513,6 +495,12 @@ int llread(unsigned char *packet)
                         if(bytes == -1) return EXIT_FAILURE;
                     }
                     printf("BCC1 wrong, sending REJ.\n");
+                    state = start;
+                    packet_index = 0;
+                    first_data_byte = TRUE;
+                    ignore_next = FALSE;
+                    computed_bcc_2 = 0x00;
+                    continue;
                 }
             break;
             case bcc_ok:
@@ -532,8 +520,6 @@ int llread(unsigned char *packet)
                     printf("Received ESC! Next byte will be translated.\n");
                     break;
                 }
-
-                // 08 07 -7D- 7E 09
 
                 if (curr_packet == FLAG) {
                     state = 5;
@@ -570,6 +556,12 @@ int llread(unsigned char *packet)
                         if(bytes == -1) return EXIT_FAILURE;
                     }
                     printf("BCC2 wrong, sending REJ.\n");
+                    state = start;
+                    packet_index = 0;
+                    first_data_byte = TRUE;
+                    ignore_next = FALSE;
+                    computed_bcc_2 = 0x00;
+                    continue;
                 }
                 STOP = TRUE;
             break;
@@ -577,8 +569,6 @@ int llread(unsigned char *packet)
     }
 
     memcpy(packet, data, packet_index);
-
-    printf("Packet contains correct payload, returning..\n");
 
     return packet_index;
 }
