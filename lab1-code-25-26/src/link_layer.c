@@ -519,11 +519,11 @@ int llread(unsigned char *packet)
                 if (ignore_next) {
                     // Process next byte after ESC
                     ignore_next = FALSE;
-                    if (curr_packet == FLAG_toinsert) curr_packet = FLAG;
-                    else if (curr_packet == ESC_toinsert) curr_packet = ESC;
-                    data[packet_index] = curr_packet;
+                    data[packet_index] = prev_packet;
                     packet_index++;
-                    computed_bcc_2 ^= curr_packet;
+                    computed_bcc_2 ^= prev_packet;
+                    if (curr_packet == FLAG_toinsert) prev_packet = FLAG;
+                    else if (curr_packet == ESC_toinsert) prev_packet = ESC;
                     break;
                 }
 
@@ -532,6 +532,8 @@ int llread(unsigned char *packet)
                     printf("Received ESC! Next byte will be translated.\n");
                     break;
                 }
+
+                // 08 07 -7D- 7E 09
 
                 if (curr_packet == FLAG) {
                     state = 5;

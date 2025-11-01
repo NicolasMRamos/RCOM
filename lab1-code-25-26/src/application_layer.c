@@ -153,6 +153,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
             if(packet[0] == DATA_PKT_CTRL){ // Received data packet
                 int dataLength = (packet[1] << 8) | packet[2];
+                printf("Data length: %d\n", dataLength);
                 fwrite(&packet[3], 1, dataLength, file);
                 totalWritten += dataLength;
             }
