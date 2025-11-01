@@ -68,10 +68,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         if(ret == -1){
             printf("Error: llwrite failed\n");
             exit(EXIT_FAILURE);
+        } else {
+            printf("START Frame Size: %d\n", ret);
         }
 
         // Data packet preparation
-        unsigned char data_packet[MAX_PAYLOAD_SIZE+3];
+        unsigned char data_packet[2 * MAX_PAYLOAD_SIZE + 6];
 
         unsigned char buffer[MAX_PAYLOAD_SIZE];
         int bytesRead;
@@ -85,6 +87,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             if(ret == -1){
                 printf("Error: llwrite failed\n");
                 exit(EXIT_FAILURE);
+            } else {
+                printf("Data Frame Size: %d\n", ret);
             }
 
         }
@@ -100,6 +104,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         if(ret == -1){
             printf("Error: llwrite failed\n");
             exit(EXIT_FAILURE);
+        } else {
+            printf("END Frame Size: %d\n", ret);
         }
 
         fclose(file);
@@ -107,7 +113,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     } else {
 
         // Prepare to read data packet
-        unsigned char packet[MAX_PAYLOAD_SIZE];
+        unsigned char packet[MAX_PAYLOAD_SIZE+3];
         int packetSize;
 
         // Read data packet
@@ -124,7 +130,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         parseControlPacket(packet, newFileName, &newFileSize);
 
         // Open new file to write on
-        FILE *file = fopen(newFileName, "wb");
+        FILE *file = fopen(filename, "wb");
         if(file == NULL){
             printf("Error: file failed to open\n");
             exit(EXIT_FAILURE);

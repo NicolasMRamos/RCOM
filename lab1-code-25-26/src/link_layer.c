@@ -461,7 +461,7 @@ int llread(unsigned char *packet)
     // Prepare for reading frame
     unsigned char computed_bcc_2 = 0x00, received_bcc2;
     unsigned char prev_packet, curr_packet, address, control;
-    unsigned char data[MAX_PAYLOAD_SIZE];
+    unsigned char data[MAX_PAYLOAD_SIZE+3];
     int packet_index = 0;
     volatile int ignore_next = FALSE, first_data_byte = TRUE;
     int state = start;
@@ -472,7 +472,7 @@ int llread(unsigned char *packet)
     while(STOP == FALSE){
         bytes = readByteSerialPort(&curr_packet);
         if(bytes == -1) printf("Error byte read, continuing.\n");
-        printf("Byte read: 0x%02X\n", curr_packet);
+        // printf("Byte read: 0x%02X\n", curr_packet);
 
         switch(state){
             case start:
@@ -574,10 +574,6 @@ int llread(unsigned char *packet)
         }
     }
 
-    if (packet == NULL || data == NULL || packet_index > MAX_PAYLOAD_SIZE) {
-        printf("memcpy error: invalid buffer\n");
-        return EXIT_FAILURE;
-    }
     memcpy(packet, data, packet_index);
 
     printf("Packet contains correct payload, returning..\n");
