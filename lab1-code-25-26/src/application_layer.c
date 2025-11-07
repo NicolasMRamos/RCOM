@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define START 0x01
 #define END 0x03
@@ -15,6 +16,8 @@
 
 #define FALSE 0
 #define TRUE 1
+
+struct timespec start, end;
 
 // Auxiliary functions definitions (implementations in the end of the file)
 int buildControlPacket(unsigned char *ctrl_packet, const long fileSize, const char *filename, int *ctrl_packetSize, int is_start);
@@ -25,6 +28,8 @@ int parseControlPacket(const unsigned char *ctrl_packet, char *filename, long *f
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     int ret;
 
     LinkLayer configs;
@@ -173,6 +178,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Error: llclose failed\n");
         exit(EXIT_FAILURE);
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) +
+                    (end.tv_nsec - start.tv_nsec) / 1e9;
+
+    printf("Transmission time: %.6f seconds\n", elapsed);
 }
 
 // Auxiliary functions implementations
