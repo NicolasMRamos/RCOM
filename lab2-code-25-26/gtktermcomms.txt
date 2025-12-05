@@ -1,0 +1,17 @@
+Exp1
+
+system reset-config
+
+Exp2
+
+interface bridge add name=bridge120
+interface bridge add name=bridge121
+
+interface bridge port remove [find interface = ether17]
+interface bridge port remove [find interface = ether21]
+interface bridge port remove [find interface = ether23]
+
+interface bridge port add bridge=bridge121 interface=ether17
+interface bridge port add bridge=bridge120 interface=ether21
+interface bridge port add bridge=bridge120 interface=ether23
+
