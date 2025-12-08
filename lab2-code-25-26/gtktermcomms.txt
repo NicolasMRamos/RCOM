@@ -15,3 +15,24 @@ interface bridge port add bridge=bridge121 interface=ether17
 interface bridge port add bridge=bridge120 interface=ether21
 interface bridge port add bridge=bridge120 interface=ether23
 
+interface bridge port remove [find interface = ether15]
+interface bridge port add bridge=bridge110 interface=ether15
+
+interface bridge port remove [find interface = ether13]
+interface bridge port add bridge=bridge110 interface=ether13
+
+// switch to router
+
+ip address add interface=ether1 address=10.227.20.119/24
+ip address add interface=ether2 address=172.16.111.254/24
+
+route add default gw 172.16.111.254
+route add default gw 172.16.110.254
+route add default gw 172.16.111.254 
+
+ip route add dst-address=172.16.110.0/24 gateway=172.16.111.253
+
+ip route add dst-address=0.0.0.0/0 gateway=10.227.20.254
+ip route add dst-address=172.16.1.0/24 gateway=10.227.20.254
+
+
