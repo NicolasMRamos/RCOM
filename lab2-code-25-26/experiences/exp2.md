@@ -67,13 +67,13 @@ After initiating captures in the corresponding tuxes, we ping broadcast from tux
 ping -b 172.16.120.255 # ping broadcast
 ```
 
-The Wireshark log is available in "wslogs/exp2/exp2_log2.pcapng".
+The Wireshark logs are available in "wslogs/exp2/exp2_log2_tux22.pcapng", "wslogs/exp2/exp2_log2_tux23.pcapng" and "wslogs/exp2/exp2_log2_tux24.pcapng".
 
 ### Step 10
 
 Steps 7, 8 and 9 are repeated, but for tux122.
 
-The Wireshark log is available in "wslogs/exp2/exp2_log3.pcapng".
+The Wireshark logs are available in "wslogs/exp2/exp2_log3_tux22.pcapng", "wslogs/exp2/exp2_log3_tux23.pcapng" and "wslogs/exp2/exp2_log3_tux24.pcapng".
 
 ## Questions
 

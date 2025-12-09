@@ -52,6 +52,17 @@ ip route add dst-address=172.16.120.0/24 gateway=172.16.121.253
 
 ### Step 3
 
+Using the following commands, we pinged tuxes 122, 124 and the Router:
+
+``` bash
+ping 172.16.121.1 # tux122
+
+ping 172.16.20.254 # tux124
+
+ping 172.16.21.254 # Router
+```
+
+The Wireshark log is available in "wslogs/exp1/exp4_log1.pcapng".
 
 ### Step 4
 
