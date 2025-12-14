@@ -8,7 +8,7 @@ In GTKTerm, we configure the interface:
 
 ``` bash
 interface bridge port remove [find interface=ether22]
-interface bridge port add bridge=bridge21 interface=ether22
+interface bridge port add bridge=bridge121 interface=ether22
 ```
 
 Then, the following commands were used:
@@ -35,7 +35,7 @@ IP: 172.16.120.254
 * if_e2:
 
 ``` bash
-MAC: ec:75:0c:c2:tbd:tbd
+MAC: ec:75:0c:c2:10:6b
 IP: 172.16.121.253
 ```
 

@@ -11,16 +11,14 @@ sudo vim /etc/resolv.conf
 Then, we add the following line:
 
 ```bash
-nameserver 10.227.120.3
+nameserver 10.227.20.3
 ```
 
 ### Step 2
 
-To test if DNS is working, we can ping different services:
+To test if DNS is working, we can ping google:
 
 ```bash
-ping services.netlab.fe.up.pt # ping feup netlab
-
 ping www.google.com # ping google
 ```
 
@@ -28,7 +26,7 @@ ping www.google.com # ping google
 
 Wireshark will show the DNS query and response.
 
-The Wireshark log is available in "wslogs/exp5/exp5_log.pcapng".
+The Wireshark log is available in "wslogs/exp5/googleping.pcapng".
 
 ## Questions
 

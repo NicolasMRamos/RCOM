@@ -2,7 +2,11 @@
 
 ### Step 1
 
-First, we connect ether1 of the Router to PY.24 (Or PY.12, if that doesn't work).
+First, we connect ether1 of the Router to PY.24 (Or PY.12, if that doesn't work) and configure it in the Microtik terminal:
+
+``` bash
+ip address add interface=ether1 address=172.16.1.121/24 # interface for ftp server
+```
 
 Then, we connect ether2 of the Router to ether15 of the switch, and configure it in GTKTerm:
 
@@ -11,11 +15,10 @@ interface bridge port remove [find interface = ether15]
 interface bridge port add bridge=bridge121 interface=ether15
 ```
 
-After configuring the switch, we switch the MicroTik terminal to the Router's console to configure it's IP addresses:
+After configuring the switch, we configure the interface in the Microtik terminal:
 
 ``` bash
-# ip address add interface=ether1 address=10.227.120.129/24
-ip address add interface=ether2 address=172.16.121.254/24
+ip address add interface=ether2 address=172.16.121.254/24 # interface for tux123
 ```
 
 ### Step 2
@@ -47,7 +50,7 @@ sudo route add -net 172.16.1.0/24 gw 172.16.121.254 # reaches FTP server
 * Router (in MicroTik terminal):
 
 ``` bash
-ip route add dst-address=172.16.120.0/24 gateway=172.16.121.253
+ip route add dst-address=172.16.120.0/24 gateway=172.16.121.253 # for tux123 
 ```
 
 ### Step 3

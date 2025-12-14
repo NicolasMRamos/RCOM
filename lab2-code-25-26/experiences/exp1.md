@@ -11,13 +11,13 @@ To configure each of the tuxes, the "ifconfig if_e1 [ipaddress]" command was use
 * tux123:
 
 ``` bash
-sudo ifconfig if_e1 172.16.120.1 # setup interface if_e1
+sudo ifconfig if_e1 172.16.120.1/24 # setup interface if_e1
 ```
 
-* tuxY4:
+* tux124:
 
 ``` bash
-sudo ifconfig if_e1 172.16.120.254 # setup interface if_e1
+sudo ifconfig if_e1 172.16.120.254/24 # setup interface if_e1
 ```
 
 ### Step 3

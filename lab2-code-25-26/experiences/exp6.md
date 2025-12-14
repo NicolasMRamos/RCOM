@@ -1,10 +1,22 @@
 # Experience 6 - TCP connections
 
-### Step 1
+### Steps 1, 2 and 3
 
-### Step 2
+To compile the client:
 
-### Step 3
+``` bash
+gcc clientFTP.c -o ftp
+```
+
+To test the client, we tried downloading the file "pipe.txt" from the ftp server:
+
+``` bash
+./ftp ftp://ftp.netlab.fe.up.pt/pipe.txt
+```
+
+The downloaded file is in "wslogs/exp6/pipe.txt"
+
+The Wireshark log is available in "wslogs/exp6/ftptest.pcapng"
 
 ### Step 4
 

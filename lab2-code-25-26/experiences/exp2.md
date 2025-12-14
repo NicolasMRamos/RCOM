@@ -2,7 +2,13 @@
 
 ### Step 1
 
-E1 of tux122 was connected to ether19 in the switch. It's MAC and IP address are as follows:
+E1 of tux122 was connected to ether19 in the switch. In the terminal:
+
+``` bash
+sudo ifconfig if_e1 172.16.121.1/24 # setup if_e1
+```
+
+It's MAC and IP address are as follows:
 
 ``` bash
 MAC: ec:75:0c:c2:31:73
