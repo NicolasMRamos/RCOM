@@ -1,0 +1,9 @@
+/system reset-config
+# Leave the password blank
+login: admin
+pass:
+
+ip address add interface=ether1 address=172.16.1.111/24
+ip address add interface=ether2 address=172.16.111.254/24
+
+ip route add dst-address=172.16.110.0/24 gateway=172.16.111.253

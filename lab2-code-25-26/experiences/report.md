@@ -10,27 +10,27 @@
 
 ## Experience 1 - Configure an IP Network
 
-#### Step 1
+### Step 1
 
 E1 of tux123 and E1 of tux124 were connected to ether21 and ether23 respectively, in the switch.
 
-#### Step 2
+### Step 2
 
 To configure each of the tuxes, the "ifconfig if_e1 [ipaddress]" command was used to setup the interface.
 
 * tux123:
 
 ``` bash
-sudo ifconfig if_e1 172.16.120.1 # setup interface if_e1
+sudo ifconfig if_e1 172.16.120.1/24 # setup interface if_e1
 ```
 
-* tuxY4:
+* tux124:
 
 ``` bash
-sudo ifconfig if_e1 172.16.120.254 # setup interface if_e1
+sudo ifconfig if_e1 172.16.120.254/24 # setup interface if_e1
 ```
 
-#### Step 3
+### Step 3
 
 The MAC and IP address of each tux can be obtained using the "ifconfig" command. They are as following:
 
@@ -48,7 +48,7 @@ MAC: ec:75:0c:c2:3c:75
 IP: 172.16.120.254
 ```
 
-#### Step 4
+### Step 4
 
 Using the "ping [ipaddress]" command, we can verify the connectivity of the tuxes between eachother:
 
@@ -64,7 +64,7 @@ ping 172.16.120.254 # ping tux124
 ping 172.16.120.1 # ping tux123
 ```
 
-#### Step 5
+### Step 5
 
 On each of the tuxes:
 
@@ -74,7 +74,7 @@ sudo route -n # shows forwarding table entries
 sudo arp -a # shows arp table entries
 ```
 
-#### Step 6
+### Step 6
 
 * tux123:
 
@@ -82,7 +82,7 @@ sudo arp -a # shows arp table entries
 sudo arp -d 172.16.120.1 # deletes arp table entries
 ```
 
-#### Steps 7, 8, 9 and 10
+### Steps 7, 8, 9 and 10
 
 First, we start the capture on tux123.if_e1 with Wireshark.
 
@@ -94,34 +94,42 @@ ping 172.16.120.254 # ping tux124
 
 The Wireshark log is available in "wslogs/exp1/exp1_log.pcapng".
 
-### Questions
+## Questions: Experiment 1
 
-#### What are the ARP packets and what are they used for?
+### What are the ARP packets and what are they used for?
 
-#### What are the MAC and IP addresses of ARP packets and why?
+### What are the MAC and IP addresses of ARP packets and why?
 
-#### What packets does the ping command generate?
+### What packets does the ping command generate?
 
-#### What are the MAC and IP addresses of the ping packets?
+### What are the MAC and IP addresses of the ping packets?
 
-#### How to determine if a receiving Ethernet frame is ARP, IP, ICMP?
+### How to determine if a receiving Ethernet frame is ARP, IP, ICMP?
 
-#### How to determine the length of a receiving frame?
+### How to determine the length of a receiving frame?
 
-#### What is the loopback interface and why is it important?
+### What is the loopback interface and why is it important?
+
+---
 
 ## Experience 2 - Implement two bridges in a switch
 
-#### Step 1
+### Step 1
 
-E1 of tux122 was connected to ether19 in the switch. It's MAC and IP address are as follows:
+E1 of tux122 was connected to ether19 in the switch. In the terminal:
+
+``` bash
+sudo ifconfig if_e1 172.16.121.1/24 # setup if_e1
+```
+
+It's MAC and IP address are as follows:
 
 ``` bash
 MAC: ec:75:0c:c2:31:73
 IP: 172.16.121.1
 ```
 
-#### Step 2
+### Step 2
 
 To create the bridges, we access the MicroTik terminal in GTKTerm on tux122. After logging in, we resetted the configurations so the switch was clean:
 
@@ -136,7 +144,7 @@ Then, the following commands were used to setup the bridges:
 /interface bridge add name=bridge121
 ```
 
-#### Step 3
+### Step 3
 
 Inside GTKTerm, the following commands were executed:
 
@@ -157,7 +165,7 @@ Inside GTKTerm, the following commands were executed:
 /interface bridge port add bridge=bridge120 interface=ether23 # tux124
 ```
 
-#### Steps 4, 5 and 6
+### Steps 4, 5 and 6
 
 After initiating Wireshark in tux123.if_e1, we ping tux124 and tux122 from tux123 for a few seconds:
 
@@ -171,7 +179,7 @@ Important: the ping to tux122 FAILS, as tux123 is not in the same subnet as tux1
 
 The Wireshark log is available in "wslogs/exp2/exp2_log1.pcapng"
 
-#### Steps 7, 8 and 9
+### Steps 7, 8 and 9
 
 After initiating captures in the corresponding tuxes, we ping broadcast from tux123 for a few seconds:
 
@@ -181,21 +189,23 @@ ping -b 172.16.120.255 # ping broadcast
 
 The Wireshark logs are available in "wslogs/exp2/exp2_log2_tux22.pcapng", "wslogs/exp2/exp2_log2_tux23.pcapng" and "wslogs/exp2/exp2_log2_tux24.pcapng".
 
-#### Step 10
+### Step 10
 
 Steps 7, 8 and 9 are repeated, but for tux122.
 
 The Wireshark logs are available in "wslogs/exp2/exp2_log3_tux22.pcapng", "wslogs/exp2/exp2_log3_tux23.pcapng" and "wslogs/exp2/exp2_log3_tux24.pcapng".
 
-### Questions
+## Questions
 
-#### How to configure bridgeY0?
+### How to configure bridgeY0?
 
-#### How many broadcast domains are there? How can you conclude it from the logs?
+### How many broadcast domains are there? How can you conclude it from the logs?
+
+---
 
 ## Experience 3 - Configure a Router in Linux
 
-#### Step 1
+### Step 1
 
 To configure tux124 as a router, first we connected the E2 of tux124 to ether22.
 
@@ -203,7 +213,7 @@ In GTKTerm, we configure the interface:
 
 ``` bash
 interface bridge port remove [find interface=ether22]
-interface bridge port add bridge=bridge21 interface=ether22
+interface bridge port add bridge=bridge121 interface=ether22
 ```
 
 Then, the following commands were used:
@@ -216,7 +226,7 @@ sudo sysctl -w net.ipv4.ip_forward=1 # enable ip forwarding
 sudo sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=0 # disable icmp e-i-b broadcasts
 ```
 
-#### Step 2
+### Step 2
 
 The MAC and IP addresses of tux124 are as following:
 
@@ -230,11 +240,11 @@ IP: 172.16.120.254
 * if_e2:
 
 ``` bash
-MAC: ec:75:0c:c2:tbd:tbd
+MAC: ec:75:0c:c2:10:6b
 IP: 172.16.121.253
 ```
 
-#### Step 3
+### Step 3
 
 For the tuxes to reach eachother, they need a route through tux124. The following commands set that up:
 
@@ -246,7 +256,7 @@ sudo route add -net 172.16.121.0/24 gw 172.16.120.254 # for tux123
 
 Note: "gw" stands for gateway. The specified gateway should be accessible by the tux.
 
-#### Step 4
+### Step 4
 
 On tuxes 122, 123 and 124, execute:
 
@@ -254,7 +264,7 @@ On tuxes 122, 123 and 124, execute:
 sudo route -n # observe routes and confirm if they're tux-accessible
 ```
 
-#### Steps 5, 6 and 7
+### Steps 5, 6 and 7
 
 After initiating capture in tux123, we ping each interface for a few seconds:
 
@@ -268,7 +278,7 @@ ping 172.16.121.1 # ping tux122
 
 The Wireshark log is available in "wslogs/exp3/exp3_log1.pcapng".
 
-#### Steps 8, 9, 10 and 11
+### Steps 8, 9, 10 and 11
 
 After initiating 2 captures in tux124.if_e1 and tux124.if_e2 respectively, we clean each tux's arp tables:
 
@@ -288,23 +298,29 @@ ping 172.16.121.1 # ping tux122
 
 The Wireshark log are available in "wslogs/exp3/exp3_log2_e1.pcapng" and "wslogs/exp3/exp3_log2_e2.pcapng".
 
-### Questions
+## Questions
 
-#### What routes are there in the tuxes? What are their meaning?
+### What routes are there in the tuxes? What are their meaning?
 
-#### What information does an entry of the forwarding table contain?
+### What information does an entry of the forwarding table contain?
 
-#### What ARP messages, and associated MAC addresses, are observed and why?
+### What ARP messages, and associated MAC addresses, are observed and why?
 
-#### What ICMP packets are observed and why?
+### What ICMP packets are observed and why?
 
-#### What are the IP and MAC addresses associated to ICMP packets and why?
+### What are the IP and MAC addresses associated to ICMP packets and why?
 
-## Experience 4 - Configure a Commercial Router and Implement NAT
+---
 
-#### Step 1
+# Experience 4 - Configure a Commercial Router and Implement NAT
 
-First, we connect ether1 of the Router to PY.24 (Or PY.12, if that doesn't work).
+### Step 1
+
+First, we connect ether1 of the Router to PY.24 (Or PY.12, if that doesn't work) and configure it in the Microtik terminal:
+
+``` bash
+ip address add interface=ether1 address=172.16.1.121/24 # interface for ftp server
+```
 
 Then, we connect ether2 of the Router to ether15 of the switch, and configure it in GTKTerm:
 
@@ -313,14 +329,13 @@ interface bridge port remove [find interface = ether15]
 interface bridge port add bridge=bridge121 interface=ether15
 ```
 
-After configuring the switch, we switch the MicroTik terminal to the Router's console to configure it's IP addresses:
+After configuring the switch, we configure the interface in the Microtik terminal:
 
 ``` bash
-# ip address add interface=ether1 address=10.227.120.129/24
-ip address add interface=ether2 address=172.16.121.254/24
+ip address add interface=ether2 address=172.16.121.254/24 # interface for tux123
 ```
 
-#### Step 2
+### Step 2
 
 Verifying routes:
 
@@ -349,10 +364,10 @@ sudo route add -net 172.16.1.0/24 gw 172.16.121.254 # reaches FTP server
 * Router (in MicroTik terminal):
 
 ``` bash
-ip route add dst-address=172.16.120.0/24 gateway=172.16.121.253
+ip route add dst-address=172.16.120.0/24 gateway=172.16.121.253 # for tux123 
 ```
 
-#### Step 3
+### Step 3
 
 Using the following commands, we pinged tuxes 122, 124 and the Router:
 
@@ -366,7 +381,7 @@ ping 172.16.121.254 # Router
 
 The Wireshark log is available in "wslogs/exp1/exp4_log1.pcapng".
 
-#### Step 4
+### Step 4
 
 ``` bash
 sudo sysctl net.ipv4.conf.if_e1.accept_redirects=0
@@ -410,7 +425,7 @@ Doing traceroute again:
 ```bash
 traceroute -n 172.16.120.1 # command
 
-traceroute to 172.16.20.1 (172.16.20.1), 30 hops max, 60 byte packets  # result
+traceroute to 172.16.120.1 (172.16.120.1), 30 hops max, 60 byte packets  # result
  1  172.16.121.253  0.211 ms  0.194 ms  0.177 ms
  2  172.16.120.1  0.408 ms  0.391 ms  0.375 ms
 ```
@@ -423,7 +438,7 @@ sudo sysctl net.ipv4.conf.all.accept_redirects=1
 ```
 If we delete the route via tux124, tux122 will not be able to reach the subnet 172.16.20.0, as the route through the router has been deleted.
 
-#### Steps 5, 6 and 7
+### Steps 5, 6 and 7
 
 We ping the FTP server from tux123 using:
 
@@ -434,21 +449,24 @@ If NAT is on in the Router, we can verify the connectivity between tux123 and Ro
 
 If NAT is turned off, then when we try to ping the FTP server from tux123, we will get an error, because the FTP server does not know how to reach tux123 in the way back.
 
-### Questions
+## Questions
 
-#### How to configure a static route in a commercial router?
+### How to configure a static route in a commercial router?
 
-#### What are the paths followed by the packets, with and without ICMP redirect enabled, in the experiments carried out and why?
+### What are the paths followed by the packets, with and without ICMP redirect enabled, in the experiments carried out and why?
 
-#### How to configure NAT in a commercial router?
+### How to configure NAT in a commercial router?
 
-#### What does NAT do?
+### What does NAT do?
 
-#### What happens when tuxY3 pings the FTP server with the NAT disabled? Why?
+### What happens when tuxY3 pings the FTP server with the NAT disabled? Why?
+
+
+---
 
 ## Experience 5 - DNS
 
-#### Step 1
+### Step 1
 
 To add DNS to each tux, we need to edit the file "/etc/resolv.conf":
 
@@ -459,52 +477,72 @@ sudo vim /etc/resolv.conf
 Then, we add the following line:
 
 ```bash
-nameserver 10.227.120.3
+nameserver 10.227.20.3
 ```
 
-#### Step 2
+### Step 2
 
-To test if DNS is working, we can ping different services:
+To test if DNS is working, we can ping google:
 
 ```bash
-ping services.netlab.fe.up.pt # ping feup netlab
-
 ping www.google.com # ping google
 ```
 
-#### Step 3
+### Step 3
 
 Wireshark will show the DNS query and response.
 
-The Wireshark log is available in "wslogs/exp5/exp5_log.pcapng".
+The Wireshark log is available in "wslogs/exp5/googleping.pcapng".
 
-### Questions
+## Questions
 
-#### How to configure the DNS service in a host?
+### How to configure the DNS service in a host?
 
-#### What packets are exchanged by DNS and what information is transported?
+### What packets are exchanged by DNS and what information is transported?
 
-## Experience 6 - TCP connections
+---
 
-#### Step 1
+# Experience 6 - TCP connections
 
-#### Step 2
+### Steps 1, 2, 3 and 4
 
-#### Step 3
+To compile the client:
 
-#### Step 4
+``` bash
+gcc ftp_client.c -o ftp_client
+```
 
-#### Step 5
+To test the client, we compiled it then tried downloading the file "pipe.txt" from the ftp server:
 
-### Questions
+``` bash
+./ftp_client ftp://ftp.netlab.fe.up.pt/pipe.txt
+```
 
-#### How many TCP connections are opened by your FTP application?
-#### In what connection is transported the FTP control information?
-#### What are the phases of a TCP connection?
-#### How does the ARQ TCP mechanism work? What are the relevant TCP fields?
-#### What relevant information can be observed in the logs?
-#### How does the TCP congestion control mechanism work? What are the relevant fields. How did the throughput of the data connection evolve along the time? Is it according to the TCP congestion control mechanism?
-#### Is the throughput of a TCP data connections disturbed by the appearance of a second TCP connection? How?
+The downloaded file is in "wslogs/exp6/pipe.txt"
+
+The Wireshark log is available in "wslogs/exp6/ftptest.pcapng"
+
+### Step 5
+
+For step 5, the Wireshark logs are available in "wslogs/exp6/downloadtux2.pcapng" and "wslogs/exp6/downloadtux3.pcapng".
+
+## Questions
+
+### How many TCP connections are opened by your FTP application?
+
+### In what connection is transported the FTP control information?
+
+### What are the phases of a TCP connection?
+
+### How does the ARQ TCP mechanism work? What are the relevant TCP fields?
+
+### What relevant information can be observed in the logs?
+
+### How does the TCP congestion control mechanism work? What are the relevant fields. How did the throughput of the data connection evolve along the time? Is it according to the TCP congestion control mechanism?
+
+### Is the throughput of a TCP data connections disturbed by the appearance of a second TCP connection? How?
+
+---
 
 # Conclusions 
 
