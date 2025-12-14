@@ -6,6 +6,20 @@
 
 # Part 1
 
+The developed application is present in "client/ftp_client.c"
+
+Compilation: 
+
+``` bash
+gcc ftp_client.c -o ftp_client 
+```
+
+Execution:
+
+``` bash
+./ftp_client ftp://[user:password@]host/path
+```
+
 # Part 2
 
 ## Experience 1 - Configure an IP Network
