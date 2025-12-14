@@ -111,7 +111,7 @@ Doing traceroute again:
 ```bash
 traceroute -n 172.16.120.1 # command
 
-traceroute to 172.16.20.1 (172.16.20.1), 30 hops max, 60 byte packets  # result
+traceroute to 172.16.120.1 (172.16.120.1), 30 hops max, 60 byte packets  # result
  1  172.16.121.253  0.211 ms  0.194 ms  0.177 ms
  2  172.16.120.1  0.408 ms  0.391 ms  0.375 ms
 ```
@@ -122,7 +122,7 @@ Activating the acceptance of ICMP redirect:
 sudo sysctl net.ipv4.conf.if_e1.accept_redirects=1
 sudo sysctl net.ipv4.conf.all.accept_redirects=1
 ```
-If we delete the route via tux124, tux122 will not be able to reach the subnet 172.16.20.0, as the route through the router has been deleted.
+If we delete the route via tux124, tux122 will not be able to reach the subnet 172.16.120.0, as the route through the router has been deleted.
 
 ### Steps 5, 6 and 7
 

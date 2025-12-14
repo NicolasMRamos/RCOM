@@ -1,22 +1,24 @@
 /system reset-config
+
 # Leave the password blank
 login: admin
 pass:
-/interface bridge add name=bridge110
-/interface bridge add name=bridge111
+
+/interface bridge add name=bridge120
+/interface bridge add name=bridge121
 
 /interface bridge port remove [find interface =ether19]
 /interface bridge port remove [find interface =ether21]
 /interface bridge port remove [find interface =ether23]
 
-/interface bridge port add bridge=bridge111 interface=ether19
-/interface bridge port add bridge=bridge110 interface=ether21
-/interface bridge port add bridge=bridge110 interface=ether23
+/interface bridge port add bridge=bridge121 interface=ether19
+/interface bridge port add bridge=bridge120 interface=ether21
+/interface bridge port add bridge=bridge120 interface=ether23
 
 /interface bridge port remove [find interface =ether22]
-/interface bridge port add bridge=bridge111 interface=ether22
+/interface bridge port add bridge=bridge121 interface=ether22
 
 /interface bridge port remove [find interface =ether15]
-/interface bridge port add bridge=bridge111 interface=ether15
+/interface bridge port add bridge=bridge121 interface=ether15
 
 

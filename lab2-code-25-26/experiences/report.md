@@ -436,7 +436,7 @@ Activating the acceptance of ICMP redirect:
 sudo sysctl net.ipv4.conf.if_e1.accept_redirects=1
 sudo sysctl net.ipv4.conf.all.accept_redirects=1
 ```
-If we delete the route via tux124, tux122 will not be able to reach the subnet 172.16.20.0, as the route through the router has been deleted.
+If we delete the route via tux124, tux122 will not be able to reach the subnet 172.16.120.0, as the route through the router has been deleted.
 
 ### Steps 5, 6 and 7
 
