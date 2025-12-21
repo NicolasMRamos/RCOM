@@ -1,8 +1,4 @@
-# RCOM Project 2 Report
-
-[Title, Authors, Summary]
-
-# Introduction
+# RCOM Project 2
 
 # Part 1
 
@@ -326,7 +322,7 @@ The Wireshark log are available in "wslogs/exp3/exp3_log2_e1.pcapng" and "wslogs
 
 ---
 
-# Experience 4 - Configure a Commercial Router and Implement NAT
+## Experience 4 - Configure a Commercial Router and Implement NAT
 
 ### Step 1
 
@@ -516,7 +512,7 @@ The Wireshark log is available in "wslogs/exp5/googleping.pcapng".
 
 ---
 
-# Experience 6 - TCP connections
+## Experience 6 - TCP connections
 
 ### Steps 1, 2, 3 and 4
 
@@ -555,11 +551,3 @@ For step 5, the Wireshark logs are available in "wslogs/exp6/downloadtux2.pcapng
 ### How does the TCP congestion control mechanism work? What are the relevant fields. How did the throughput of the data connection evolve along the time? Is it according to the TCP congestion control mechanism?
 
 ### Is the throughput of a TCP data connections disturbed by the appearance of a second TCP connection? How?
-
----
-
-# Conclusions 
-
-# References
-
-# Annexes
