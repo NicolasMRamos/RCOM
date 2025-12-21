@@ -1,0 +1,236 @@
+Starting link-layer protocol application
+  - Serial port: /dev/ttyS10
+  - Role: tx
+  - Baudrate: 9600
+  - Number of tries: 3
+  - Timeout: 4
+  - Filename: run.txt
+Serial port opened.
+SET byte sent.
+Alarm configured for UA reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x07
+Byte read: 0x04
+Byte read: 0x7E
+UA byte read. Disabling alarm.
+Connection established, returning now.
+Information Frame 0 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x00
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x85
+Byte read: 0x86
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+Timeout, resending frame.
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Byte read: 0x7E
+RR1 received.
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Byte read: 0x7E
+RR1 received.
+Byte read: 0x7E
+RR1 received.
+Information Frame 1 sent.
+RR1 received.
+Information Frame 1 sent.
+Information Frame 1 sent.
+Alarm configured for answer reading.
+Alarm configured for answer reading.
+Error byte read, continuing.
+Byte read: 0x7E
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Byte read: 0x7E
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Timeout, resending frame.
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Alarm configured for answer reading again.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x05
+Byte read: 0x03
+Byte read: 0x05
+Byte read: 0x06
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Serial port closed.
+
+
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+RR0 received.
+RR0 received.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Serial port closed.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Alarm configured for DISC reading.
+Byte read: 0x7E
+Byte read: 0x03
+Byte read: 0x0B
+Byte read: 0x08
+Byte read: 0x7E
+DISC byte read, sending UA byte..
+UA byte sent.
+Serial port closed.
